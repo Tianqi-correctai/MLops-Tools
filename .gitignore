@@ -1,0 +1,8 @@
+# Ignore subfolders in datasets
+datasets/*/
+
+# Ignore python cache
+__pycache__/
+
+# Ignore virtual environment
+venv/
