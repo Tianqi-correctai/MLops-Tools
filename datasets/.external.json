@@ -1,0 +1,13 @@
+{
+    "datasets": [
+        {
+            "path": "/home/correct-ai/cvat/datasets/Canfor2"
+        },
+        {
+            "path": "/path/to/dataset2"
+        },
+        {
+            "path": "/path/to/dataset3"
+        }
+    ]
+}

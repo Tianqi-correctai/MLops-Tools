@@ -1,0 +1,19 @@
+{
+    "cvat_url": "",
+    "username": "",
+    "password": "",
+    "export_format": "YOLO 1.1",
+    "datasets_path": "../datasets",
+    "remap_dict": {
+        "person": "0",
+        "car": "1",
+        "truck": "2",
+        "loader": "2",
+        "dozer": "2",
+        "excavator": "2",
+        "sideboom": "2",
+        "forklift": "2",
+        "motorgrader": "2",
+        "pipe": "3"
+    }
+}
