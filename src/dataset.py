@@ -193,11 +193,12 @@ def get_external_datasets(config_path):
     """
     dataset_paths = []
     config_path = Path(config_path)
-    config = json.load(open(config_path))
-    for entry in config["datasets"]:
-        path = Path(entry["path"])
-        if path.is_dir():
-            dataset_paths.append(path)
-        else:
-            print(f"[WARN] External dataset at {entry['path']} does not exist.")
+    if config_path.exists():
+        config = json.load(open(config_path))
+        for entry in config["datasets"]:
+            path = Path(entry["path"])
+            if path.is_dir():
+                dataset_paths.append(path)
+            else:
+                print(f"[WARN] External dataset at {entry['path']} does not exist.")
     return dataset_paths

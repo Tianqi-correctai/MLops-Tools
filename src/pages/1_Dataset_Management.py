@@ -246,14 +246,15 @@ with tab3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         # load annotation
         annotation_path = Path(selected_images[index].parent.parent / "labels" / selected_images[index].stem).with_suffix(".txt")
-        annotations = annotation_path.read_text().split('\n')
+        if annotation_path.exists():
+            annotations = annotation_path.read_text().split('\n')
 
-        # add annotation overlay
-        for annotation in annotations:
-            if annotation == "":
-                continue
-            class_id, *coords = annotation.split()
-            image = draw_bbox(image, coords, class_id)
+            # add annotation overlay
+            for annotation in annotations:
+                if annotation == "":
+                    continue
+                class_id, *coords = annotation.split()
+                image = draw_bbox(image, coords, class_id)
 
         st.image(image, caption=selected_images[index].resolve(), use_column_width=True)
 
