@@ -57,14 +57,14 @@ def build_tree_task(dataset, tasks):
         nodes.append(sac.TreeItem(f"{dataset.stem}#Others", icon="layers-half", tag=f"{len(project_images) - sum(task_lens)}"))
         dataset_images[f"{dataset.stem}#Others"] = set(project_images) - set.union(*[dataset_images[f"{dataset.stem}#{task['id']}"] for task in tasks])
     
-    return sac.TreeItem(dataset.stem, icon="folder2", tag=f"{len(project_images)}", children=nodes)
+    return sac.TreeItem(dataset.stem, icon="folder2", tag=f"{len(project_images)}", children=nodes, tooltip=str(dataset))
     
     
 
 def build_tree_folder(dataset):
     tasks_images = [file for file in Path(dataset / "images").glob(f"*") if file.suffix.lower() in IMG_FORMATS]
     dataset_images[dataset.stem] = set(tasks_images)
-    return sac.TreeItem(dataset.stem, icon="layers-half", tag=f"{len(tasks_images)}")
+    return sac.TreeItem(dataset.stem, icon="layers-half", tag=f"{len(tasks_images)}", tooltip=str(dataset))
 
 
 def getSelectedFrames(selected : list):
