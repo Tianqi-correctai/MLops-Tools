@@ -1,9 +1,12 @@
+import os
+from pathlib import Path
 from cvat_api import CVATAPI
 import streamlit as st
 import pandas as pd
 import json
 
 # Parameters load from the config file
+os.chdir(Path(__file__).resolve().parent)
 json_file = open("config.json")
 params = json.load(json_file)
 

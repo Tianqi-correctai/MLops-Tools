@@ -1,0 +1,6 @@
+[submodule "backends/nets/yolov5"]
+	path = backends/nets/yolov5
+	url = https://github.com/ultralytics/yolov5
+[submodule "backends/nets/ultralytics"]
+	path = backends/nets/ultralytics
+	url = https://github.com/ultralytics/ultralytics

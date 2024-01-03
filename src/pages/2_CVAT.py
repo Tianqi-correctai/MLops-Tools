@@ -121,7 +121,7 @@ task_editor = st.data_editor(
 button = st.button("Download Selected Tasks", disabled=task_editor[task_editor['selected'] == True].shape[0] == 0)
 
 if button:
-    with st.spinner('Downloading...'):
+    with st.spinner('Downloading... Do not close this page!'):
         my_bar = st.progress(0, text="Downloading...")
         all_size = task_editor[task_editor['selected'] == True]['size'].sum()
         #st.write(task_editor[task_editor['selected'] == True][['id', 'size']])
