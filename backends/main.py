@@ -51,18 +51,39 @@ class TaskManager:
 
                 os.chdir(Path(__file__).resolve().parent)
                 venv_python = 'nets/yolov5/venv/bin/python'
-                log_file = f'logs/{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.log' 
+                
+                log = Path(f'logs/{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}')
+                log.mkdir(parents=True, exist_ok=True)
+                log_file = log / 'runtime.log'
+
                 extra_args = []
                 if task_data['extra_args']:
                     extra_args = task_data['extra_args'].split()
                 process_str = [venv_python, '-u', 'nets/yolov5/train.py', *args, *extra_args]
-                # create a log file
+                
+                cmd_file = log / 'command.log'
+                with open(cmd_file, 'w') as f:
+                    f.write('Command:\n')
+                    f.write(' '.join(process_str)+'\n\n')
+                    f.write('Configs:\n')
+                    # get files names in process_str
+                    for index, arg in enumerate(process_str):
+                        # if the argument is a yaml file, get the file name and previous argument name
+                        if arg.endswith('.yaml'):
+                            f.write(f'{process_str[index-1]}: {arg}\n')
+                            with open(arg, 'r') as yaml_file:
+                                f.write(yaml_file.read())
+                                f.write('#' * 50 + '\n')
+                    if task_data['remark']:
+                        f.write(f'Remark: {task_data["remark"]}\n')
+
                 with open(log_file, 'w') as f:
 
                     task = {
                         'task_id': task_id,
                         'status': "running",
-                        'log_file': log_file,
+                        'log_file': str(log_file.resolve()),
+                        'cmd_file': str(cmd_file.resolve()),
                         'command': ' '.join(process_str),
                         'model': task_data['model'],
                     }

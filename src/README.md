@@ -104,3 +104,26 @@ During the download process, the following steps will be performed for each sele
 Once all selected tasks have been downloaded and processed, the progress bar will reach 100% and display "Done!".
 
 Please note that this page requires access to the CVAT API and the specified dataset path for downloading and processing tasks.  
+
+
+### **3. Model Training Page**
+
+The Model Training page allows users to start new training sessions for object detection models. Users can select the model, dataset, hyperparameters, and other training options to customize their training process.
+
+#### Workflow
+
+1. **Select Model**: Choose the object detection model from the available options (YoloV5 or YoloV8) using the dropdown menu.
+
+2. **Set Training Parameters**: Specify the number of epochs and batch size for the training process using the number input fields.
+
+3. **Advanced Options**: Expand this section to access additional options for the training process. Enter any extra arguments (like `--weights` ) or remarks related to the training.
+
+4. **Select Hyperparameters**: Choose the hyperparameter file for the selected model from the available options using the dropdown menu. The content of the selected hyperparameter file will be displayed in a code block.
+
+5. **Select Dataset Configuration**: Choose the dataset configuration for training. If the "Dataset Configs" option is selected, a dropdown menu will appear with available dataset configurations. Selecting a configuration will display its content in a code block. If the "New Config" option is selected, enter a name for the new configuration and select the training and validation datasets from the available options.
+
+6. **Start Training**: Click the "Start Training" button to initiate the training process. The selected model, training parameters, hyperparameters, dataset configuration, extra arguments, and remarks will be used for training. The training process will be sent to the server for execution.
+
+7. **Save Config**: If a new dataset configuration is created, the "Save Config" button will be enabled. Click this button to save the configuration. The configuration will be saved with the specified name and the selected training and validation datasets.
+
+Please note that the code provided is incomplete and may require additional implementation to function properly.

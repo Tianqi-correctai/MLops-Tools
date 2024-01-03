@@ -165,6 +165,7 @@ if tasks['current_task'] is not None:
     with col2:
         if st.button("Stop", type='primary', use_container_width=True):
             requests.post(request_url + "/stop-training")
+            time.sleep(1)
             st.rerun()
     
     df = pd.DataFrame([tasks['current_task']])
@@ -283,7 +284,7 @@ if button_start_training:
             "data": str(train_path.resolve()),
         },
         "extra_args": extra_args,
-        #"remark": remark,
+        "remark": remark,
     }
     requests.post(request_url + "/start-training", json=args)
     st.rerun()
