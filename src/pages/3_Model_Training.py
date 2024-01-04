@@ -248,9 +248,16 @@ if dataset_option == 0:
                 st.code(f.read(), language='yaml')
 else:
     config_name = st.text_input("Config Name", value=f"new_config_{date.today().strftime('%Y_%m_%d')}")
-    train_set = st.multiselect("Training Datasets", [dataset.stem for dataset in datasets])
+    train_set_options = []
+    for dataset in datasets:
+        if not dataset.is_absolute():
+            train_set_options.append(dataset.stem)
+        else:
+            train_set_options.append(str(dataset))
 
-    val_set = st.multiselect("Validation Datasets", [dataset.stem for dataset in datasets if dataset.stem not in train_set])
+    train_set = st.multiselect("Training Datasets", train_set_options)
+
+    val_set = st.multiselect("Validation Datasets", [dataset for dataset in train_set_options if dataset not in train_set])
 
     # train_indices = sac.cascader(items=[sac.CasItem(dataset.stem) for dataset in datasets],
     #                                 label="Train Set", format_func='title', multiple=True, search=True, clear=True, placeholder='Select Datasets for Training', return_index=True)

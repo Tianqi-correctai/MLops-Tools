@@ -39,7 +39,17 @@ def build_tree_task(dataset, tasks):
     task_lens = []
 
     project_images = [file for file in Path(dataset / "images").glob(f"*") if file.suffix.lower() in IMG_FORMATS]
-    dataset_images[dataset.stem] = set(project_images)
+
+    dataset_display = None
+    if dataset.is_absolute():
+        dataset_display = str(dataset)
+    else:
+        dataset_display = dataset.stem
+
+
+    dataset_images[dataset_display] = set(project_images)
+
+
 
     for j, task in enumerate(tasks):
         project_id = task["project_id"]
@@ -47,24 +57,34 @@ def build_tree_task(dataset, tasks):
         prefix = f"{project_id}_{task_id}_"
         task_images = [file for file in Path(dataset / "images").glob(f"{prefix}*") if file.suffix.lower() in IMG_FORMATS]
         task_lens.append(len(task_images))
-        dataset_images[f"{dataset.stem}#{task_id}"] = set(task_images)
 
 
-    nodes = [sac.TreeItem(f"{dataset.stem}#{task['id']}", icon="stack", tag=f"{task_lens[task_index]}", tooltip=task["name"]) 
+        dataset_images[f"{dataset_display}#{task_id}"] = set(task_images)
+
+
+
+    nodes = [sac.TreeItem(f"{dataset_display}#{task['id']}", icon="stack", tag=f"{task_lens[task_index]}", tooltip=task["name"]) 
                 for task_index, task in enumerate(tasks)]
     
     if len(project_images) != sum(task_lens):
-        nodes.append(sac.TreeItem(f"{dataset.stem}#Others", icon="layers-half", tag=f"{len(project_images) - sum(task_lens)}"))
-        dataset_images[f"{dataset.stem}#Others"] = set(project_images) - set.union(*[dataset_images[f"{dataset.stem}#{task['id']}"] for task in tasks])
+        nodes.append(sac.TreeItem(f"{dataset_display}#Others", icon="layers-half", tag=f"{len(project_images) - sum(task_lens)}"))
+        dataset_images[f"{dataset_display}#Others"] = set(project_images) - set.union(*[dataset_images[f"{dataset_display}#{task['id']}"] for task in tasks])
     
-    return sac.TreeItem(dataset.stem, icon="folder2", tag=f"{len(project_images)}", children=nodes, tooltip=str(dataset))
+    return sac.TreeItem(dataset_display, icon="folder2", tag=f"{len(project_images)}", children=nodes, tooltip=str(dataset))
     
     
 
 def build_tree_folder(dataset):
     tasks_images = [file for file in Path(dataset / "images").glob(f"*") if file.suffix.lower() in IMG_FORMATS]
-    dataset_images[dataset.stem] = set(tasks_images)
-    return sac.TreeItem(dataset.stem, icon="layers-half", tag=f"{len(tasks_images)}", tooltip=str(dataset))
+
+    dataset_display = None
+    if dataset.is_absolute():
+        dataset_display = str(dataset)
+    else:
+        dataset_display = dataset.stem
+
+    dataset_images[dataset_display] = set(tasks_images)
+    return sac.TreeItem(dataset_display, icon="layers-half", tag=f"{len(tasks_images)}", tooltip=str(dataset))
 
 
 def getSelectedFrames(selected : list):
@@ -111,7 +131,14 @@ tab1, tab2, tab3 = st.tabs(["Overview", "Manage", "Frames"])
 with tab1:
     with st.container():
         for dataset in datasets:
-            with st.expander(f"**{dataset.stem}**"):
+
+            title = None
+            if dataset.is_absolute():
+                title = str(dataset)
+            else:
+                title = dataset.stem
+
+            with st.expander(f"**{title}**"):
                 st.write("Images:", len([file for file in list((dataset / "images").glob("*")) if file.suffix.lower() in IMG_FORMATS]))
                 for json_file in sorted(list((dataset / ".meta").glob("*.json"))):
                     container = st.container(border=True)
