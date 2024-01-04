@@ -25,6 +25,44 @@ def get_training_files(model):
     elif model == "YoloV8":
         return Path("../backends/nets/ultralytics/ultralytics/cfg/datasets").glob("*.yaml")
     
+
+def get_train_runs(model):
+    runs = {}  # {path : name}
+    if model == "YoloV5":
+        yolov5 = Path("../backends/data/train/YoloV5")
+        
+        if yolov5.exists():
+            for run in yolov5.iterdir():
+                if run.is_dir() and (run / "run").exists():
+                    runs[str((run / "run").resolve())] = run.stem
+
+        if Path("../backends/nets/yolov5/runs/train").exists():
+            for run in Path("../backends/nets/yolov5/runs/train").iterdir():
+                if run.is_dir():
+                    path_str = str(run.resolve())
+                    if runs.get(path_str) is None:
+                        runs[path_str] = path_str
+
+        return runs
+
+    elif model == "YoloV8":
+        raise NotImplementedError
+    
+def get_train_weights(model):
+    weights = {}  # {name : path}
+    if model == "YoloV5":
+        runs = get_train_runs(model)
+        for run_path, run_name in runs.items():
+            run_weights = Path(run_path) / "weights"
+            if run_weights.exists():
+                for weight in run_weights.iterdir():
+                    if weight.is_file() and weight.suffix == ".pt":
+                        weights[run_name + "/" + weight.name] = str(weight.resolve())
+        return weights
+
+    elif model == "YoloV8":
+        return {}
+    
 def write_train_config(name, model, train_datasets, val_datasets):
     config = f"""
 # Train/val sets
@@ -169,7 +207,7 @@ if tasks['current_task'] is not None:
             st.rerun()
     
     df = pd.DataFrame([tasks['current_task']])
-    st.dataframe(df, hide_index=True, column_order=['task_id', 'model', 'status', 'log_file', 'command'])
+    st.dataframe(df, hide_index=True, column_order=['task_id', 'model', 'status', 'data', 'command'])
 else:
     st.subheader("No Current Task")
     
@@ -178,7 +216,7 @@ if len(tasks['finished_tasks']) > 0:
     st.subheader("Finished Tasks")
 
     df = pd.DataFrame(tasks['finished_tasks'])
-    st.dataframe(df, hide_index=True, column_order=['task_id', 'model', 'status', 'log_file','command'])
+    st.dataframe(df, hide_index=True, column_order=['task_id', 'model', 'status', 'data', 'artifacts', 'command'])
 
 # display the queued tasks
 if len(tasks['queue']) > 0:
@@ -206,12 +244,21 @@ val_indices = []
 
 
 model = st.selectbox("Model", ["YoloV5", "YoloV8"])
+weights = get_train_weights(model)
 
 col1, col2 = st.columns([1, 1])
 with col1:
     epochs = st.number_input("Epochs", min_value=1, value=100, step=1, max_value=1000)
 with col2:
     batch_size = st.number_input("Batch Size", min_value=1, value=16, step=1, max_value=1000)
+
+options = ["Train From Scratch", "yolov5s.pt", "yolov5m.pt", "yolov5l.pt", "yolov5x.pt"]
+options += list(weights.keys())
+weight = st.selectbox("Pretrained Weights", options)
+if weight == "Train From Scratch":
+    weight = ""
+elif weight in weights:
+    weight = weights[weight]
 
 with st.expander("Advanced Options"):
     extra_args = st.text_input("Extra Arguments", value="")
@@ -289,6 +336,7 @@ if button_start_training:
             "batch-size": batch_size,
             "hyp": str(hyps_path.resolve()),
             "data": str(train_path.resolve()),
+            "weights": weight,
         },
         "extra_args": extra_args,
         "remark": remark,

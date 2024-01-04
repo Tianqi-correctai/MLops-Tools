@@ -7,8 +7,8 @@ __pycache__/
 # Ignore virtual environment
 venv/
 
-# Ignore logs
-backends/logs/
+# Ignore data
+backends/data/
 
 # Ignore datasets
 backends/nets/datasets/

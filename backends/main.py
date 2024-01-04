@@ -79,16 +79,16 @@ class TaskManager:
                 os.chdir(Path(__file__).resolve().parent)
                 venv_python = 'nets/yolov5/venv/bin/python'
                 
-                log = Path(f'logs/{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}')
-                log.mkdir(parents=True, exist_ok=True)
-                log_file = log / 'runtime.log'
+                run_path = Path(f'data/train/{task_data['model']}/{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}')
+                run_path.mkdir(parents=True, exist_ok=True)
+                log_file = run_path / 'stdout.log'
 
                 extra_args = []
                 if task_data['extra_args']:
                     extra_args = task_data['extra_args'].split()
                 process_str = [venv_python, '-u', 'nets/yolov5/train.py', *args, *extra_args]
                 
-                cmd_file = log / 'command.log'
+                cmd_file = run_path / 'meta.log'
                 with open(cmd_file, 'w') as f:
                     f.write('Command:\n')
                     f.write(' '.join(process_str)+'\n\n')
@@ -107,8 +107,7 @@ class TaskManager:
                 task = {
                     'task_id': task_id,
                     'status': "running",
-                    'log_file': str(log_file.resolve()),
-                    'cmd_file': str(cmd_file.resolve()),
+                    'data': str(run_path.resolve()),
                     'command': ' '.join(process_str),
                     'model': task_data['model'],
                 }
@@ -139,11 +138,13 @@ class TaskManager:
 
                 # add run files to the task
                 if task['model'] == 'YoloV5':
-                    run_id = self.yolov5_runs_map.get(log_file)
-                    if run_id is not None:
-                        task['run_files'] = run_id
+                    yolo_run_folder = self.yolov5_runs_map.get(log_file)
+                    if yolo_run_folder is not None:
+                        yolo_run_folder = str(Path(yolo_run_folder).resolve())
+                        task['artifacts'] = yolo_run_folder
                         with open(cmd_file, 'a') as f:
-                            f.write(f'Run_files: {run_id}\n')
+                            f.write(f'artifacts: {yolo_run_folder}\n')
+                        os.symlink(yolo_run_folder, run_path /"run")
 
                 # move on to the next task
                 self.task_queue.task_done()
