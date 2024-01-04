@@ -1,5 +1,6 @@
 from pathlib import Path
 import queue
+import threading
 import time
 from flask import Flask, jsonify, request
 import subprocess
@@ -16,6 +17,7 @@ class TaskManager:
         self.stop_event = Event()
         self.stop_current_task = Event()
         self.runner = Thread(target=self.train)
+        self.yolov5_runs_map = {}
 
     def terminate(self):
         self.stop_event.set()
@@ -37,6 +39,31 @@ class TaskManager:
                 tasks.append(task)
         for task in tasks:
             self.task_queue.put(task)
+
+    def train_log_handler(self, process, log_file_path):
+        with open(log_file_path, 'w') as log_file:
+            r_pos = None
+            while True:
+                output = process.stdout.readline()
+                if output == '' and process.poll() is not None:
+                    break
+                if output:
+                    if "it/s]" in output:
+                        if r_pos is not None:
+                            log_file.seek(r_pos)
+                            log_file.truncate()
+                        r_pos = log_file.tell()
+
+                    elif r_pos is not None:
+                        r_pos = None
+
+                    # get the run id ("...nets/yolov5/runs/train/exp%run_id%....")
+                    if self.yolov5_runs_map.get(log_file_path) is None and "Plotting labels to" in output:
+                        run_id = output.split("Plotting labels to ")[1].split("/labels.jpg")[0]
+                        self.yolov5_runs_map[log_file_path] = run_id
+
+                    log_file.write(output)
+                    log_file.flush()
 
     def train(self):
         while not self.stop_event.is_set():
@@ -77,35 +104,46 @@ class TaskManager:
                     if task_data['remark']:
                         f.write(f'Remark: {task_data["remark"]}\n')
 
-                with open(log_file, 'w') as f:
+                task = {
+                    'task_id': task_id,
+                    'status': "running",
+                    'log_file': str(log_file.resolve()),
+                    'cmd_file': str(cmd_file.resolve()),
+                    'command': ' '.join(process_str),
+                    'model': task_data['model'],
+                }
+                self.current_task = task
 
-                    task = {
-                        'task_id': task_id,
-                        'status': "running",
-                        'log_file': str(log_file.resolve()),
-                        'cmd_file': str(cmd_file.resolve()),
-                        'command': ' '.join(process_str),
-                        'model': task_data['model'],
-                    }
-                    self.current_task = task
+                process = subprocess.Popen(process_str, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                log_thread = threading.Thread(target=self.train_log_handler, args=(process, log_file))
+                log_thread.start()
 
-                    process = subprocess.Popen(process_str,stdout=f, stderr=f)
-                    stopped = False
-                    while process.poll() is None:
-                        time.sleep(1)
-                        if self.stop_current_task.is_set():
-                            self.stop_current_task.clear()
-                            process.kill()
-                            stopped = True
-                            break
+                stopped = False
+                while process.poll() is None:
+                    time.sleep(1)
+                    if self.stop_current_task.is_set():
+                        self.stop_current_task.clear()
+                        process.kill()
+                        stopped = True
+                        break
 
-                    if process.poll() == 0:
-                        status = "finished"
-                    elif stopped:
-                        status = "stopped"
-                    else:
-                        status = "failed"
-                    task['status'] = status
+                log_thread.join()  # Ensure the logging thread has finished
+
+                if process.poll() == 0:
+                    status = "finished"
+                elif stopped:
+                    status = "stopped"
+                else:
+                    status = "failed"
+                task['status'] = status
+
+                # add run files to the task
+                if task['model'] == 'YoloV5':
+                    run_id = self.yolov5_runs_map.get(log_file)
+                    if run_id is not None:
+                        task['run_files'] = run_id
+                        with open(cmd_file, 'a') as f:
+                            f.write(f'Run_files: {run_id}\n')
 
                 # move on to the next task
                 self.task_queue.task_done()
