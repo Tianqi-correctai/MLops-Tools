@@ -48,7 +48,7 @@ class TaskManager:
                 if output == '' and process.poll() is not None:
                     break
                 if output:
-                    if "it/s]" in output:
+                    if "it/s]" in output or "s/it]" in output:
                         if r_pos is not None:
                             log_file.seek(r_pos)
                             log_file.truncate()
@@ -79,7 +79,7 @@ class TaskManager:
                 os.chdir(Path(__file__).resolve().parent)
                 venv_python = 'nets/yolov5/venv/bin/python'
                 
-                run_path = Path(f'data/train/{task_data['model']}/{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}')
+                run_path = Path(f"data/train/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
                 run_path.mkdir(parents=True, exist_ok=True)
                 log_file = run_path / 'stdout.log'
 
