@@ -28,7 +28,7 @@ from taskmanager import TaskManager
 def get_train_runs(model):
     runs = {}  # {path : name}
     if model == "YoloV5":
-        yolov5 = Path("data/train/YoloV5")
+        yolov5 = Path("../backends/data/train/YoloV5")
         
         # get runs from the data folder
         if yolov5.exists():
@@ -37,8 +37,8 @@ def get_train_runs(model):
                     runs[str((run / "run").resolve())] = run.stem
 
         # get runs from the yolov5/runs/train folder
-        if Path("nets/yolov5/runs/train").exists():
-            for run in Path("nets/yolov5/runs/train").iterdir():
+        if Path("../backends/nets/yolov5/runs/train").exists():
+            for run in Path("../backends/nets/yolov5/runs/train").iterdir():
                 if run.is_dir():
                     path_str = str(run.resolve())
                     # check if the run is already in the runs dict
@@ -52,7 +52,15 @@ def get_train_runs(model):
     
 def get_train_weights(model):
     weights = {}  # {name : path}
+
     if model == "YoloV5":
+        yolov5 = Path("../backends/data/train/YoloV5")
+        # get uploaded weights
+        if (yolov5 / "uploaded").exists():
+            for weight in (yolov5 / "uploaded").iterdir():
+                if weight.is_file() and weight.suffix == ".pt":
+                    weights["Uploaded"+ "/" + weight.name] = str(weight.resolve())
+
         runs = get_train_runs(model)
         for run_path, run_name in runs.items():
             run_weights = Path(run_path) / "weights"
@@ -60,6 +68,9 @@ def get_train_weights(model):
                 for weight in run_weights.iterdir():
                     if weight.is_file() and weight.suffix == ".pt":
                         weights[run_name + "/" + weight.name] = str(weight.resolve())
+        
+
+
         return weights
 
     elif model == "YoloV8":
@@ -116,6 +127,16 @@ def validate_api():
         return jsonify(result[0]), result[1]
     else:
         return 500
+    
+# export
+@app.route('/export', methods=['POST'])
+def export_api():
+    task_data = request.get_json()
+    result = manager.add_task("export", task_data)
+    if result:
+        return jsonify(result[0]), result[1]
+    else:
+        return 500
 
 
 # stop a running task
@@ -152,16 +173,19 @@ def upload_weight(model):
         if file.filename == '' or file.filename.split('.')[-1] != 'pt':
             return jsonify({"error": "No pt file provided"}), 400
         if file:
-            filename = file.filename
+            filename = ''
+            if request.args.get('file_name') is not None:
+                filename = request.args.get('file_name')
+            if filename == '':
+                filename = file.filename
             # create the uploaded folder if it does not exist
-            Path(f"data/train/{model}/uploaded").mkdir(parents=True, exist_ok=True)
-            file.save(f"data/train/{model}/uploaded/{filename}")
+            Path(f"../backends/data/train/{model}/uploaded").mkdir(parents=True, exist_ok=True)
+            file.save(f"../backends/data/train/{model}/uploaded/{filename}")
             return jsonify({"status": "file uploaded"}), 200
         else:
             return jsonify({"error": "No file provided"}), 400
     elif model == "YoloV8":
         raise NotImplementedError
-    
 
 # shut down the server
 @app.route('/shutdown')

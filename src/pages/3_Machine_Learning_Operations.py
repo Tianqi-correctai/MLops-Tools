@@ -25,44 +25,6 @@ def get_training_files(model):
     elif model == "YoloV8":
         return Path("../backends/nets/ultralytics/ultralytics/cfg/datasets").glob("*.yaml")
     
-
-def get_train_runs(model):
-    runs = {}  # {path : name}
-    if model == "YoloV5":
-        yolov5 = Path("../backends/data/train/YoloV5")
-        
-        if yolov5.exists():
-            for run in yolov5.iterdir():
-                if run.is_dir() and (run / "run").exists():
-                    runs[str((run / "run").resolve())] = run.stem
-
-        if Path("../backends/nets/yolov5/runs/train").exists():
-            for run in Path("../backends/nets/yolov5/runs/train").iterdir():
-                if run.is_dir():
-                    path_str = str(run.resolve())
-                    if runs.get(path_str) is None:
-                        runs[path_str] = path_str
-
-        return runs
-
-    elif model == "YoloV8":
-        raise NotImplementedError
-    
-def get_train_weights(model):
-    weights = {}  # {name : path}
-    if model == "YoloV5":
-        runs = get_train_runs(model)
-        for run_path, run_name in runs.items():
-            run_weights = Path(run_path) / "weights"
-            if run_weights.exists():
-                for weight in run_weights.iterdir():
-                    if weight.is_file() and weight.suffix == ".pt":
-                        weights[run_name + "/" + weight.name] = str(weight.resolve())
-        return weights
-
-    elif model == "YoloV8":
-        return {}
-    
 def write_train_config(name, model, train_datasets, val_datasets):
     config = f"""
 # Train/val sets
@@ -237,7 +199,7 @@ if len(tasks['queue']) > 0:
 # add a new task
 st.title("Start New Task")
 
-tab1, tab2, tab3 = st.tabs(["Train", "Validation", "Inference"])
+tab1, tab2, tab3, tab4 = st.tabs([":red[Train]", ":blue[Validation]", ":green[Inference]", ":orange[Import/Export]"])
 
 
 with tab1:
@@ -245,7 +207,9 @@ with tab1:
     datasets = get_availible_datasets(st.session_state.datasets_path)
 
     model = st.selectbox("Model", ["YoloV5", "YoloV8"], key="model-tab1")
-    weights = get_train_weights(model)
+
+    # /train-weights/<string:model>
+    weights = requests.get(request_url + f"/train-weights/{model}").json()
 
     col1, col2 = st.columns([1, 1])
     with col1:
@@ -343,7 +307,7 @@ with tab2:
     datasets = get_availible_datasets(st.session_state.datasets_path)
 
     model = st.selectbox("Model", ["YoloV5", "YoloV8"], key="model-tab2")
-    weights = get_train_weights(model)
+    weights = requests.get(request_url + f"/train-weights/{model}").json()
 
     weight = st.selectbox("Weights", weights.keys(), key="weights-tab2")
 
@@ -417,7 +381,7 @@ with tab2:
 with tab3:
     st.write("Please select the model and the video to start inference.")
     model = st.selectbox("Model", ["YoloV5", "YoloV8"])
-    weights = get_train_weights(model)
+    weights = requests.get(request_url + f"/train-weights/{model}").json()
 
     weight = st.selectbox("Weights", weights.keys())
 
@@ -450,3 +414,53 @@ with tab3:
         }
         requests.post(request_url + "/inference", json=args)
         st.rerun()
+
+with tab4:
+    st.write("Please select the model and manage weights.")
+    model = st.selectbox("Model", ["YoloV5", "YoloV8"], key="model-tab4")
+    weights = requests.get(request_url + f"/train-weights/{model}").json()
+
+    options = ["Upload New Weights"] + list(weights.keys())
+    weight = st.selectbox("Weights", options, key="weights-tab4")
+    if weight != "Upload New Weights":
+        export_name = st.text_input("Export Name Without Extension", value=weight, key="export-name-tab4")
+
+    if weight in weights:
+        weight = weights[weight]
+
+    if weight == "Upload New Weights":
+        with st.form("my-upload-form", clear_on_submit=True):
+            import_name = st.text_input("Upload Name Without Extension", value="", key="import-name-tab4")
+            uploaded_file = st.file_uploader("Upload Weights", accept_multiple_files=False, type="pt")
+            col1, col2, col3 = st.columns([1, 1.5, 1])
+            upload_button = st.form_submit_button("Upload", type="primary", use_container_width=True)
+
+            if upload_button:
+                if (uploaded_file is not None):
+                    # use /upload-weight/<string:model>
+                    if import_name != "":
+                        response = requests.post(request_url + f"/upload-weight/{model}?file_name={import_name+".pt"}", files={"file": uploaded_file})
+                    else:
+                        response = requests.post(request_url + f"/upload-weight/{model}", files={"file": uploaded_file})
+                    st.rerun()
+    else:
+        with st.expander("Advanced Options"):
+            extra_args = st.text_input("Extra Arguments", value="", key="extra-args-tab4")
+            remark = st.text_area("Remark", value="", key="remark-tab4")
+        col1, col2, col3 = st.columns([1, 1.5, 1])
+        with col1:
+            button_start_export = st.button("Start Export", type="primary", use_container_width=True)
+
+        if button_start_export:
+
+            args = {
+                "model": model,
+                "args": {
+                    "weights": weight,
+                    "include": "onnx",
+                },
+                "extra_args": extra_args,
+                "remark": remark,
+            }
+            requests.post(request_url + "/export", json=args)
+            st.rerun()

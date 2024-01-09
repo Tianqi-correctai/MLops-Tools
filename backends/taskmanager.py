@@ -87,6 +87,9 @@ class TaskManager:
                 if task_type == "inference":
                     task = self.inference(task_id, task_data)
 
+                if task_type == "export":
+                    task = self.export(task_id, task_data)
+
                 # move on to the next task
                 self.task_queue.task_done()
                 self.finished_tasks.append(task)
@@ -126,6 +129,9 @@ class TaskManager:
                     with open(arg, 'r') as yaml_file:
                         f.write(yaml_file.read())
                         f.write('#' * 50 + '\n')
+            if task_data.get('weights') is not None:
+                f.write(f'Weights: {task_data["weights"]}\n')
+
             if task_data.get('remark') is not None:
                 f.write(f'Remark: {task_data["remark"]}\n')
 
@@ -204,6 +210,7 @@ class TaskManager:
                     with open(arg, 'r') as yaml_file:
                         f.write(yaml_file.read())
                         f.write('#' * 50 + '\n')
+            f.write(f'Weights: {task_data["weights"]}\n')
             if task_data.get('remark') is not None:
                 f.write(f'Remark: {task_data["remark"]}\n')
 
@@ -320,6 +327,77 @@ class TaskManager:
                     f.write(f'artifacts: {yolo_run_folder}\n')
                 os.symlink(yolo_run_folder, run_path /"run")
         return task 
+    
+    # export is realtime
+    def export(self, task_id, task_data):
+        args = []
+        for key, value in task_data['args'].items():
+            args.append(f'--{key}')
+            args.append(f'{value}')
+
+        os.chdir(Path(__file__).resolve().parent)
+        venv_python = 'nets/yolov5/venv/bin/python'
+                    
+        run_path = Path(f"data/export/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+        run_path.mkdir(parents=True, exist_ok=True)
+        log_file = run_path / 'stdout.log'
+
+        extra_args = []
+        if task_data.get('extra_args') is not None:
+            extra_args = task_data['extra_args'].split()
+        process_str = [venv_python, '-u', 'nets/yolov5/export.py', *args, *extra_args]
+
+        cmd_file = run_path / 'meta.log'
+        with open(cmd_file, 'w') as f:
+            f.write('Command:\n')
+            f.write(' '.join(process_str)+'\n\n')
+            for key, value in task_data['args'].items():
+                f.write(f'{key}: {value}\n')
+            if task_data.get('remark') is not None:
+                f.write(f'Remark: {task_data['remark']}\n')
+
+        task = {
+                        'task_id': task_id,
+                        'type': 'export',
+                        'status': "running",
+                        'data': str(run_path.resolve()),
+                        'command': ' '.join(process_str),
+                        'model': task_data['model'],
+                    }
+        self.current_task = task
+
+        process = subprocess.Popen(process_str, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        log_thread = threading.Thread(target=self.log_handler, args=("export", process, log_file))
+        log_thread.start()
+        stopped = False
+        while process.poll() is None:
+            time.sleep(1)
+            if self.stop_current_task.is_set():
+                self.stop_current_task.clear()
+                process.kill()
+                stopped = True
+                break
+
+        log_thread.join()  # Ensure the logging thread has finished
+
+        if process.poll() == 0:
+            status = "finished"
+        elif stopped:
+            status = "stopped"
+        else:
+            status = "failed"
+        task['status'] = status
+
+        # add run files to the task
+        if task['model'] == 'YoloV5':
+            yolo_run_folder = self.yolov5_runs_map.get(log_file)
+            if yolo_run_folder is not None:
+                yolo_run_folder = str(Path(yolo_run_folder).resolve())
+                task['artifacts'] = yolo_run_folder
+                with open(cmd_file, 'a') as f:
+                    f.write(f'artifacts: {yolo_run_folder}\n')
+                os.symlink(yolo_run_folder, run_path /"run")
+        return task 
 
     def get_current_task(self):
         return self.current_task
@@ -366,7 +444,7 @@ class TaskManager:
     def add_task(self, task_type, task_data):
         task_id = self.task_max_id
 
-        if task_type not in ["train", "validate", "inference"]:
+        if task_type not in ["train", "validate", "inference", "export"]:
             return {"error": "Task type not found"}, 400
         
         if task_data.get("model") not in  ["YoloV5", "YoloV8"]:
