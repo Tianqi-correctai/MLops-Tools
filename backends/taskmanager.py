@@ -388,15 +388,32 @@ class TaskManager:
             status = "failed"
         task['status'] = status
 
+        # get location of exported model
+        model_path = Path(task_data['args']['weights'].replace('.pt', '.onnx'))
+        model_name = task_data.get('model_name', model_path.name)
+        if model_name == ".pt":
+            model_name = model_path.name
+        uploaded = False
+        if model_path.exists():
+            uploaded = model_path.parent.name == "uploaded"
+
         # add run files to the task
-        if task['model'] == 'YoloV5':
-            yolo_run_folder = self.yolov5_runs_map.get(log_file)
-            if yolo_run_folder is not None:
-                yolo_run_folder = str(Path(yolo_run_folder).resolve())
-                task['artifacts'] = yolo_run_folder
-                with open(cmd_file, 'a') as f:
-                    f.write(f'artifacts: {yolo_run_folder}\n')
-                os.symlink(yolo_run_folder, run_path /"run")
+        # if task['model'] == 'YoloV5':
+        #     yolo_run_folder = self.yolov5_runs_map.get(log_file)
+        #     if yolo_run_folder is not None and not uploaded:
+        #         yolo_run_folder = str(Path(yolo_run_folder).resolve())
+        #         task['artifacts'] = yolo_run_folder
+        #         with open(cmd_file, 'a') as f:
+        #             f.write(f'artifacts: {yolo_run_folder}\n')
+        #         os.symlink(yolo_run_folder, run_path /"run")
+        # copy the exported model to the run folder
+        if model_path.exists():
+            os.rename(model_path, run_path / model_name)
+        # # zip the run folder
+        # os.chdir(run_path.parent)
+        # subprocess.run(['zip', '-r', f'{model_name}.zip', run_path.name])
+        # # put the zip file in the run folder
+        # os.rename(run_path.parent / f'{model_name}.zip', run_path / f'{model_name}.zip')
         return task 
 
     def get_current_task(self):

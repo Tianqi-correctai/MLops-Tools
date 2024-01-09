@@ -423,7 +423,7 @@ with tab4:
     options = ["Upload New Weights"] + list(weights.keys())
     weight = st.selectbox("Weights", options, key="weights-tab4")
     if weight != "Upload New Weights":
-        export_name = st.text_input("Export Name Without Extension", value=weight, key="export-name-tab4")
+        export_name = st.text_input("Export Name Without Extension", value="", key="export-name-tab4")
 
     if weight in weights:
         weight = weights[weight]
@@ -459,6 +459,7 @@ with tab4:
                     "weights": weight,
                     "include": "onnx",
                 },
+                "export_name": export_name+".pt",
                 "extra_args": extra_args,
                 "remark": remark,
             }
