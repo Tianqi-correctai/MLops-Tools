@@ -283,7 +283,7 @@ class TaskManager:
             for key, value in task_data['args'].items():
                 f.write(f'{key}: {value}\n')
             if task_data.get('remark') is not None:
-                f.write(f'Remark: {task_data['remark']}\n')
+                f.write(f"Remark: {task_data['remark']}\n")
 
         task = {
                         'task_id': task_id,
@@ -354,7 +354,7 @@ class TaskManager:
             for key, value in task_data['args'].items():
                 f.write(f'{key}: {value}\n')
             if task_data.get('remark') is not None:
-                f.write(f'Remark: {task_data['remark']}\n')
+                f.write(f"Remark: {task_data['remark']}\n")
 
         task = {
                         'task_id': task_id,

@@ -439,7 +439,7 @@ with tab4:
                 if (uploaded_file is not None):
                     # use /upload-weight/<string:model>
                     if import_name != "":
-                        response = requests.post(request_url + f"/upload-weight/{model}?file_name={import_name+".pt"}", files={"file": uploaded_file})
+                        response = requests.post(request_url + f'/upload-weight/{model}?file_name={import_name+".pt"}', files={"file": uploaded_file})
                     else:
                         response = requests.post(request_url + f"/upload-weight/{model}", files={"file": uploaded_file})
                     st.rerun()
