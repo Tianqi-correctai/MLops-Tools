@@ -63,7 +63,7 @@ class TaskManager:
                             run_id = output.split("Plotting labels to ")[1].split("/labels.jpg")[0]
                             self.yolov5_runs_map[log_file_path] = run_id
 
-                    if task_type == "validate" or task_type == "inference":
+                    if task_type == "validate" or task_type == "inference" or task_type == "export":
                         # get the run id ("...nets/yolov5/runs/train/exp%run_id%....")
                         if self.yolov5_runs_map.get(log_file_path) is None and "Results saved to [1m" in output:
                             run_id = output.split("Results saved to [1m")[1].split("[0m")[0]

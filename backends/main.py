@@ -9,22 +9,6 @@ import os
 import datetime
 from taskmanager import TaskManager
 
-# def inference(model, weights, images, conf_thres=0.4, device=0):    
-#     if model == "YoloV5":
-#         os.chdir(Path(__file__).resolve().parent)
-#         venv_python = 'nets/yolov5/venv/bin/python'
-#         process_str = [venv_python, '-u', 'nets/yolov5/detect.py', 
-#                        '--weights', weights, 
-#                        '--source', images, 
-#                        '--conf', str(conf_thres), 
-#                        '--device', device]
-#         process = subprocess.Popen(process_str, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-#         output = process.stdout.read()
-#         return output
-
-#     elif model == "YoloV8":
-#         raise NotImplementedError
-
 def get_train_runs(model):
     runs = {}  # {path : name}
     if model == "YoloV5":
