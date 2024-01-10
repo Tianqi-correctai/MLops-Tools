@@ -385,6 +385,10 @@ with tab3:
 
     weight = st.selectbox("Weights", weights.keys())
 
+    with st.expander("Advanced Options"):
+        extra_args = st.text_input("Extra Arguments", value="")
+        remark = st.text_area("Remark", value="")
+
     if weight in weights:
         weight = weights[weight]
 
@@ -404,10 +408,6 @@ with tab3:
         source = st.selectbox("Detection Source", sources.keys())
 
         conf_thres = st.number_input("Confidence Threshold", min_value=0.0, value=0.4, step=0.01, max_value=1.0)
-
-        with st.expander("Advanced Options"):
-            extra_args = st.text_input("Extra Arguments", value="")
-            remark = st.text_area("Remark", value="")
 
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col1:
