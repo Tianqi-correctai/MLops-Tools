@@ -171,6 +171,38 @@ def upload_weight(model):
     elif model == "YoloV8":
         raise NotImplementedError
 
+# upload a detection source
+@app.route('/upload-source', methods=['POST'])
+def upload_video():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No file provided"}), 400
+    if file:
+        filename = ''
+        if request.args.get('file_name') is not None:
+            filename = request.args.get('file_name')
+        if filename == '':
+            filename = file.filename
+        # create the uploaded folder if it does not exist
+        Path(f"../backends/data/sources").mkdir(parents=True, exist_ok=True)
+        file.save(f"../backends/data/sources/{filename}")
+        return jsonify({"status": "file uploaded"}), 200
+    else:
+        return jsonify({"error": "No file provided"}), 400
+    
+# get source list
+@app.route('/sources', methods=['GET'])
+def get_videos():
+    sources = {}
+    source_folder = Path("../backends/data/sources")
+    if source_folder.exists():
+        for source in source_folder.iterdir():
+            sources[source.name] = str(source.resolve())
+    return jsonify(sources), 200
+
+
 # shut down the server
 @app.route('/shutdown')
 def shutdown_server():

@@ -388,32 +388,62 @@ with tab3:
     if weight in weights:
         weight = weights[weight]
 
-    source = st.text_input("Video Source", value="Path to video file")
+    source_option = sac.segmented(
 
-    conf_thres = st.number_input("Confidence Threshold", min_value=0.0, value=0.4, step=0.01, max_value=1.0)
+        items=[
 
-    with st.expander("Advanced Options"):
-        extra_args = st.text_input("Extra Arguments", value="")
-        remark = st.text_area("Remark", value="")
+            sac.SegmentedItem(label='Select Source', icon='collection'),
 
-    col1, col2, col3 = st.columns([1, 1.5, 1])
-    with col1:
-        button_start_inference = st.button("Start Inference", type="primary", use_container_width=True)
+            sac.SegmentedItem(label='Upload New Source', icon='plus-circle'),
 
-    if button_start_inference:
+        ], format_func='title', grow=True, return_index=True, index=0, key="source-option-tab3")   
+    
+    if source_option == 0:
+        # get source list
+        sources = requests.get(request_url + "/sources").json()
+        source = st.selectbox("Detection Source", sources.keys())
 
-        args = {
-            "model": model,
-            "args": {
-                "source": source,
-                "weights": weight,
-                "conf-thres": conf_thres,
-            },
-            "extra_args": extra_args,
-            "remark": remark,
-        }
-        requests.post(request_url + "/inference", json=args)
-        st.rerun()
+        conf_thres = st.number_input("Confidence Threshold", min_value=0.0, value=0.4, step=0.01, max_value=1.0)
+
+        with st.expander("Advanced Options"):
+            extra_args = st.text_input("Extra Arguments", value="")
+            remark = st.text_area("Remark", value="")
+
+        col1, col2, col3 = st.columns([1, 1.5, 1])
+        with col1:
+            button_start_inference = st.button("Start Inference", type="primary", use_container_width=True)
+
+        if button_start_inference:
+
+            args = {
+                "model": model,
+                "args": {
+                    "source": sources[source],
+                    "weights": weight,
+                    "conf-thres": conf_thres,
+                },
+                "extra_args": extra_args,
+                "remark": remark,
+            }
+            requests.post(request_url + "/inference", json=args)
+            st.rerun()
+    
+    if source_option == 1:
+
+        with st.form("my-source-upload-form", clear_on_submit=True, border=False):
+            source_name = st.text_input("Upload Name", value="", key="upload-name-tab3")
+            uploaded_file = st.file_uploader("Upload file", accept_multiple_files=False, )
+            col1, col2, col3 = st.columns([1, 1.5, 1])
+            upload_button = st.form_submit_button("Upload", type="primary", use_container_width=True)
+
+            if upload_button:
+                if (uploaded_file is not None):
+                    # use /upload-weight/<string:model>
+                    if source_name != "":
+                        response = requests.post(request_url + f'/upload-source?file_name={source_name}', files={"file": uploaded_file})
+                    else:
+                        response = requests.post(request_url + f"/upload-source", files={"file": uploaded_file})
+                    st.rerun()
 
 with tab4:
     st.write("Please select the model and manage weights.")
@@ -429,7 +459,7 @@ with tab4:
         weight = weights[weight]
 
     if weight == "Upload New Weights":
-        with st.form("my-upload-form", clear_on_submit=True):
+        with st.form("my-upload-form", clear_on_submit=True, border=False):
             import_name = st.text_input("Upload Name Without Extension", value="", key="import-name-tab4")
             uploaded_file = st.file_uploader("Upload Weights", accept_multiple_files=False, type="pt")
             col1, col2, col3 = st.columns([1, 1.5, 1])
