@@ -21,6 +21,8 @@ clickable = []
 def build_tree_folder(path, index=0, level=0, max_level=2):
     children = []
     level += 1
+    if not path.exists():
+        return None
     for file in sorted(path.iterdir(), reverse=True):
         index += 1
         indices[str(file.resolve())] = index
