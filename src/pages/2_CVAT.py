@@ -26,6 +26,7 @@ if 'CVAT' not in st.session_state:
     st.session_state['projects'] = None
     st.session_state['tasks'] = None
 
+st.set_page_config(layout="centered")
 st.title("CVAT Dataset Management")
 
 # Authenticate and fetch data only if not done already

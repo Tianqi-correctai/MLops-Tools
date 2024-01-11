@@ -124,7 +124,7 @@ names:
 
 
 ###################################################################################################
-            
+st.set_page_config(layout="centered")
 st.title("MLops Tasks")
 
 # start the backend if not started

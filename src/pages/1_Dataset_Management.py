@@ -12,6 +12,7 @@ IMG_FORMATS = '.bmp', '.dng', '.jpeg', '.jpg', '.mpo', '.png', '.tif', '.tiff', 
 
 get_params()
 
+st.set_page_config(layout="wide")
 st.title("Available Datasets")
 datasets = get_availible_datasets(st.session_state.datasets_path)
 dataset_indexes = {}

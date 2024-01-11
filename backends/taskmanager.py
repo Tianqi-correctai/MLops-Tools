@@ -388,6 +388,10 @@ class TaskManager:
             status = "failed"
         task['status'] = status
 
+        # append status to the meta.log file
+        with open(cmd_file, 'a') as f:
+            f.write(f"Status: {status}\n")
+
         # get location of exported model
         model_path = Path(task_data['args']['weights'].replace('.pt', '.onnx'))
         model_name = task_data.get('model_name', model_path.name)
