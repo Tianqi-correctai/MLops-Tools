@@ -2,6 +2,7 @@ import streamlit_antd_components as sac
 import streamlit as st
 from pathlib import Path 
 
+st.set_page_config(layout="wide")
 # show things under backends/data 
 path = Path("../backends/data")
 train_path = path / "train"
@@ -73,8 +74,6 @@ def st_preview(file):
     else:
         st.write("No preview available.")
 
-
-st.set_page_config(layout="wide")
 
 col1, col2, col3 = st.columns([0.6,0.6,1.6])
 with col1:
