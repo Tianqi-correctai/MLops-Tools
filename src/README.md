@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Correct-AI MLOps Tools is a collection of tools designed to streamline the process of machine learning projects. 
+The Correct-AI MLOps Tools is a collection of tools designed to streamline the process of machine learning projects.
 These tools provide functionalities for the entire machine learning life-cycle, includes:
 
 - Download and process annotated datasets from CVAT
@@ -25,14 +25,17 @@ To use the Correct-AI MLOps Tools, follow these steps:
 
 1. Install the required dependencies for the main program:  
    ```pip install -r requirement.txt```
-2. Setup `config.json` for connection.
-3. Create virtual environments for each machine learning model under `backends/nets`.
-4. Run the command: `streamlit run src/Home.py`.
-5. You may deploy CVAT, training server, web server at different location.
+2. Install `ffmpeg`:  
+   ```sudo apt-get install ffmpeg```
+3. Setup `config.json` for connection.
+4. Create virtual environments for each machine learning model under `backends/nets`.
+5. Run the command: `streamlit run src/Home.py`.
+6. You may deploy CVAT, training server, web server at different location.
 
 ---
 
 ## User Manual
+
 ![Dataset Image](resources/Dataset.png)
 
 ### **1. Dataset Management Page**

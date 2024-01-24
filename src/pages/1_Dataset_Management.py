@@ -87,7 +87,7 @@ def build_tree_folder(dataset):
     dataset_images[dataset_display] = set(tasks_images)
     return sac.TreeItem(dataset_display, icon="layers-half", tag=f"{len(tasks_images)}", tooltip=str(dataset))
 
-
+@st.cache_data
 def getSelectedFrames(selected : list):
     frames = set()
 
@@ -100,6 +100,7 @@ def getSelectedFrames(selected : list):
             if parts[0] in full_projects:
                 continue
         frames = frames.union(set(dataset_images[item]))
+    frames = sorted(list(frames))
             
     return frames
 
@@ -153,7 +154,7 @@ with tab2:
     with col1:
         selected = sac.tree(items=build_tree_project(datasets), index=[], format_func=lambda x:x.split('#')[-1], icon='table', open_all=True, checkbox=True)
     
-    selected_images = sorted(list(getSelectedFrames(selected)))
+    selected_images = getSelectedFrames(selected)
     
     with col2:
 
@@ -205,7 +206,7 @@ with tab2:
                 if percentage == 100:
                     extract_dataset(selected_images, new_dataset_name)
                 else:
-                    random_images = random.sample(list(getSelectedFrames(selected)), int(len(selected_images) * percentage / 100))
+                    random_images = random.sample(getSelectedFrames(selected), int(len(selected_images) * percentage / 100))
                     extract_dataset(random_images, new_dataset_name)
                     extract_dataset(set(selected_images) - set(random_images), new_dataset_name_alt)
 
@@ -267,7 +268,7 @@ def draw_bbox(image, coords, class_id):
 with tab3:
 
     if len(selected_images) > 0:
-
+        
         index = st.select_slider('Images from dataset', options=range(len(selected_images)))
 
         image = cv2.imread(str(selected_images[index]), cv2.IMREAD_COLOR)

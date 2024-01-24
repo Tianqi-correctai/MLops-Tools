@@ -1,6 +1,7 @@
 import streamlit_antd_components as sac
 import streamlit as st
 from pathlib import Path 
+import subprocess
 
 st.set_page_config(layout="wide")
 # show things under backends/data 
@@ -70,7 +71,20 @@ def st_preview(file):
     elif file.suffix.lower() in IMG_FORMATS:
         st.image(str(file.resolve()))
     elif file.suffix.lower() in VIDEO_FORMATS:
-        st.video(str(file.resolve()))
+        if file.suffix.lower() == ".mp4":
+            # use ffprobe to get the video codec
+            codec = subprocess.run( ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", str(file.resolve())], capture_output=True, text=True ).stdout.strip()
+            if codec == "h264":
+                st.video(str(file.resolve()))
+                return
+        # convert to playable mp4
+        subprocess.run( ["ffmpeg", "-i", str(file.resolve()), "-vcodec", "libx264", "-f", "mp4", str(file.with_suffix(".tmp").resolve()), "-y" ] )
+        # remove the original file
+        # mv the new file to the original file
+        subprocess.run( ["rm", str(file.resolve()) ] )
+        subprocess.run( ["mv", str(file.with_suffix(".tmp").resolve()), str(file.with_suffix(".mp4").resolve()) ] )
+        st.video(str(file.with_suffix(".mp4").resolve()))
+
     else:
         st.write("No preview available.")
 
