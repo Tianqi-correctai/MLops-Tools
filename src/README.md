@@ -2,26 +2,38 @@
 
 ## Overview
 
-The Correct-AI MLOps Tools is a collection of tools designed to streamline the process of machine learning projects. These tools provide functionalities for exporting annotated datasets in various formats, remapping class IDs, and managing CVAT instances.
+The Correct-AI MLOps Tools is a collection of tools designed to streamline the process of machine learning projects. 
+These tools provide functionalities for the entire machine learning life-cycle, includes:
 
-## Features
-
-- Export annotated datasets in different formats: The tools allow you to export annotated datasets in formats such as YOLO 1.1, making it easier to integrate the datasets into your machine learning pipelines.
-- Class ID remapping: You can easily remap class IDs to match your specific requirements. The tools provide a dictionary where you can define the mapping between class names and IDs.
-- CVAT instance management: The tools provide an interface to interact with CVAT instances, allowing you to authenticate, retrieve parameters, and perform other operations.
+- Download and process annotated datasets from CVAT
+  - Smart data selection and download
+  - Remap class IDs
+  - Convert to the Yolo dataset format
+  - Preview, Sample and meta logging  
+  - Create and modify train and validation sets
+  - Link to external datasets
+- Schedual and executing MLOps Tasks
+  - Train, validation, inference, export, and import models
+  - All tasks are executed in a queue with cancelation
+  - Easy interface to create different tasks with full customization
+  - Advanced task logging and tracking
+  - Browser for evaluate results
 
 ## Getting Started
 
 To use the Correct-AI MLOps Tools, follow these steps:
 
-1. Install the required dependencies: Make sure you have the necessary dependencies installed, including the CVAT API, Streamlit, and pandas.
-2. Set up CVAT parameters: Replace the placeholder values in the code with your CVAT URL, username, password, export format, and datasets path.
-3. Instantiate the CVAT API: Uncomment the lines of code that instantiate the CVAT API and authenticate with your CVAT credentials.
-4. Run the main function: Uncomment the line of code that calls the main function to start the Correct-AI MLOps Tools.
+1. Install the required dependencies for the main program:  
+   ```pip install -r requirement.txt```
+2. Setup `config.json` for connection.
+3. Create virtual environments for each machine learning model under `backends/nets`.
+4. Run the command: `streamlit run src/Home.py`.
+5. You may deploy CVAT, training server, web server at different location.
 
 ---
 
 ## User Manual
+![Dataset Image](resources/Dataset.png)
 
 ### **1. Dataset Management Page**
 
@@ -53,6 +65,7 @@ If there are selected images, they will be **displayed** in the main area of the
 
 If no images are selected, a message will be displayed indicating that no images are selected.
 
+![Dataset Image](resources/Cvat.png)
 ### **2. CVAT Page**
 
 This page is responsible for managing projects and tasks in the CVAT application. It provides a user-friendly interface for selecting and downloading tasks.
@@ -105,18 +118,19 @@ Once all selected tasks have been downloaded and processed, the progress bar wil
 
 Please note that this page requires access to the CVAT API and the specified dataset path for downloading and processing tasks.  
 
+![Dataset Image](resources/MLOps.png)
+### **3. MLops Management Page**
 
-### **3. Model Training Page**
+The MLops Management Page allows users to create new sessions for object detection models. Users can select the model, dataset, hyperparameters, and other options to customize their tasks.
 
-The Model Training page allows users to start new training sessions for object detection models. Users can select the model, dataset, hyperparameters, and other training options to customize their training process.
-
-#### Workflow
+#### Train Workflow
 
 1. **Select Model**: Choose the object detection model from the available options (YoloV5 or YoloV8) using the dropdown menu.
 
-2. **Set Training Parameters**: Specify the number of epochs and batch size for the training process using the number input fields.
+2. **Set Training Parameters**: Specify the number of epochs and batch size for the training process using the number input fields.  
+Select a pretrain model or start from scratch.
 
-3. **Advanced Options**: Expand this section to access additional options for the training process. Enter any extra arguments (like `--weights` ) or remarks related to the training.
+3. **Advanced Options**: Expand this section to access additional options for the training process. Enter any extra arguments (like `--save-period` ) or remarks related to the training.
 
 4. **Select Hyperparameters**: Choose the hyperparameter file for the selected model from the available options using the dropdown menu. The content of the selected hyperparameter file will be displayed in a code block.
 
@@ -126,4 +140,34 @@ The Model Training page allows users to start new training sessions for object d
 
 7. **Save Config**: If a new dataset configuration is created, the "Save Config" button will be enabled. Click this button to save the configuration. The configuration will be saved with the specified name and the selected training and validation datasets.
 
-Please note that the code provided is incomplete and may require additional implementation to function properly.
+#### Validation Workflow
+
+1. **Select Model**: Choose the trained model you want to validate from the dropdown menu.
+
+2. **Select Dataset**: Choose the dataset you want to use for validation from the dropdown menu. This dataset should be different from the one used for training to ensure an unbiased evaluation of the model.
+
+3. **Set Validation Parameters**: Specify any necessary parameters for the validation process. This could include things like the confidence threshold for object detection.
+
+4. **Start Validation**: Click the "Start Validation" button to begin the validation process. The selected model and dataset, along with the specified parameters, will be used for validation. The validation process will be sent to the server for execution.  
+
+#### Inference Workflow
+
+1. **Select Model**: Choose the trained model you want to use for inference from the dropdown menu.
+
+2. **Load Data**: Load the data you want to run inference on.
+   You can also upload videos or images.
+
+3. **Set Inference Parameters**: Specify any necessary parameters for the inference process. This could include things like the confidence threshold for object detection.
+
+4. **Start Inference**: Click the "Start Inference" button to begin the inference process. The selected model and data, along with the specified parameters, will be used for inference. The inference process will be sent to the server for execution.
+
+#### Export and Import
+
+1. **Export A Model**: Choose the model and click the "Start Export" button to sent the process to the server for execution.  
+2. **Import A modal**: You can also upload model checkpoints and they can be used in the operations.  
+
+![Dataset Image](resources/Evaluation.png)
+
+### **4. Evaluation Page**
+In this page, you can browse the results of all kinds of task runs.
+You can download and visualize the data by selecting the files.
