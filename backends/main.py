@@ -187,7 +187,13 @@ def upload_video():
             filename = file.filename
         # create the uploaded folder if it does not exist
         Path(f"../backends/data/sources").mkdir(parents=True, exist_ok=True)
-        file.save(f"../backends/data/sources/{filename}")
+        # unzip if it is a zip file
+        if filename.split('.')[-1] == 'zip':
+            from zipfile import ZipFile
+            with ZipFile(file, 'r') as zipObj:
+                zipObj.extractall(f"../backends/data/sources/{filename.split('.')[0]}")
+        else:
+            file.save(f"../backends/data/sources/{filename}")
         return jsonify({"status": "file uploaded"}), 200
     else:
         return jsonify({"error": "No file provided"}), 400

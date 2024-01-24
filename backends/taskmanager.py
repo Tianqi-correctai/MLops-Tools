@@ -441,9 +441,21 @@ class TaskManager:
         for task in self.task_queue.queue:
             task_dict = {}
             task_dict['task_id'] = task[0]
-            task_dict['task_type'] = task[1]
+            task_dict['type'] = task[1]
             task_dict['model'] = task[2]['model']
-            task_dict['status'] = "not started"
+
+            args = []
+            for key, value in task[2]['args'].items():
+                args.append(f'--{key}')
+                args.append(f'{value}')
+
+            extra_args = []
+            if task[2].get('extra_args') is not None:
+                extra_args = task[2]['extra_args'].split()
+            task_dict['args'] = " ".join([*args, *extra_args])
+            if task[2].get('remark') is not None:
+                task_dict['remark'] = task[2]['remark']
+
             queued_tasks.append(task_dict)
         return queued_tasks
 

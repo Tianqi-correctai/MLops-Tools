@@ -188,7 +188,7 @@ if len(tasks['queue']) > 0:
     col1, col2 = st.columns([3, 1])
     columns = list(df.columns)
     columns.remove('selected')
-    edited_data = st.data_editor(df[['selected', *columns]], hide_index=True, disabled=columns, column_order=['selected', 'task_id', 'type',  'model', 'status', 'command'])
+    edited_data = st.data_editor(df[['selected', *columns]], hide_index=True, disabled=columns, column_order=['selected', 'task_id', 'type',  'model', 'args'])
     with col2:
         if st.button("Remove Tasks", type='primary', use_container_width=True):
             for index, row in edited_data.iterrows():
