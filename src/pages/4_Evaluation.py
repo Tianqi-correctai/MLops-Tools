@@ -20,7 +20,20 @@ MODEL_FORMATS = [".pt", ".pth", ".h5", ".hdf5", ".ckpt", ".pb", ".onnx", ".engin
 
 indices = {}
 clickable = []
+
 def build_tree_folder(path, index=0, level=0, max_level=2):
+    """
+    Recursively builds a tree structure for a given folder path.
+
+    Args:
+        path (Path): The folder path.
+        index (int, optional): The index of the folder. Defaults to 0.
+        level (int, optional): The current level of the folder. Defaults to 0.
+        max_level (int, optional): The maximum level of the folder tree. Defaults to 2.
+
+    Returns:
+        TreeItem: The tree structure representing the folder.
+    """
     children = []
     level += 1
     if not path.exists():
@@ -56,6 +69,15 @@ def build_tree_folder(path, index=0, level=0, max_level=2):
     return sac.TreeItem(str(path.resolve()), icon="folder", children=children)
 
 def text_reader(file):
+    """
+    Reads the content of a text file. If the file is too large, it is truncated.
+    
+    Args:
+        file (Path): The file path.
+        
+        Returns:
+            str: The content of the file.
+    """
     data = file.read_text()
     if len(data) > 10000:
         data = data[:10000]
@@ -64,6 +86,16 @@ def text_reader(file):
 
 
 def st_preview(file):
+    """
+    Displays a preview of a given file.
+    For text files, the content is displayed.
+    For image files, the image is displayed.
+    For video files, depending on the codec, the video is converted to mp4 with libx264 and displayed.
+    Otherwise, no preview is displayed.
+
+    Args:
+        file (Path): The file path.
+    """
     if file.suffix.lower() in TEXT_FORMATS:
         st.code(text_reader(file))
     elif file.suffix.lower() in LOG_FORMATS:
@@ -89,7 +121,10 @@ def st_preview(file):
         st.write("No preview available.")
 
 
+# Define the layout columns
 col1, col2, col3 = st.columns([0.6,0.6,1.6])
+
+# First column list all the runs
 with col1:
     st.subheader("Task Explorer")
     selected = sac.tree(items=[
@@ -100,6 +135,8 @@ with col1:
         build_tree_folder(export_path)
     ], format_func=lambda x:Path(x).name, icon='table', open_all=True)
 
+# Second column list all the files in the selected run
+# Third column show the preview of the selected file
 with col2:
     st.subheader("Task Folder")
     if len(selected) > 0 and selected[0] in clickable:

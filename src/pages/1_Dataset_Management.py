@@ -7,13 +7,17 @@ import streamlit_antd_components as sac
 import cv2
 import random
 
-
+# List of supported image formats
 IMG_FORMATS = '.bmp', '.dng', '.jpeg', '.jpg', '.mpo', '.png', '.tif', '.tiff', '.webp', '.pfm'
 
+# Getting parameters
 get_params()
 
+# Setting page configuration
 st.set_page_config(layout="wide")
 st.title("Available Datasets")
+
+# Getting available datasets
 datasets = get_availible_datasets(st.session_state.datasets_path)
 dataset_indexes = {}
 
@@ -21,6 +25,15 @@ dataset_images = {}
 selected_images = []
 
 def build_tree_project(datasets):
+    """
+    Builds a tree structure for the given datasets.
+
+    Args:
+        datasets (list): A list of dataset paths.
+
+    Returns:
+        list: A tree structure representing the datasets.
+    """
     tree = []
     
     for i, dataset in enumerate(datasets):
@@ -37,6 +50,16 @@ def build_tree_project(datasets):
     return tree
 
 def build_tree_task(dataset, tasks):
+    """
+    Builds a tree structure for the given dataset and tasks.
+
+    Args:
+        dataset (Path): The dataset path.
+        tasks (list): A list of tasks.
+
+    Returns:
+        list: A tree structure representing the tasks.
+    """
     task_lens = []
 
     project_images = [file for file in Path(dataset / "images").glob(f"*") if file.suffix.lower() in IMG_FORMATS]
@@ -76,6 +99,15 @@ def build_tree_task(dataset, tasks):
     
 
 def build_tree_folder(dataset):
+    """
+    Builds a tree structure for the given dataset.
+
+    Args:
+        dataset (Path): The dataset path.
+
+    Returns:
+        sac.TreeItem: A tree item representing the dataset.
+    """
     tasks_images = [file for file in Path(dataset / "images").glob(f"*") if file.suffix.lower() in IMG_FORMATS]
 
     dataset_display = None
@@ -88,7 +120,16 @@ def build_tree_folder(dataset):
     return sac.TreeItem(dataset_display, icon="layers-half", tag=f"{len(tasks_images)}", tooltip=str(dataset))
 
 @st.cache_data
-def getSelectedFrames(selected : list):
+def getSelectedFrames(selected: list):
+    """
+    Get the selected frames from the dataset.
+
+    Args:
+        selected (list): A list of selected dataset items.
+
+    Returns:
+        list: A list of selected frames.
+    """
     frames = set()
 
     full_projects = []
@@ -101,12 +142,22 @@ def getSelectedFrames(selected : list):
                 continue
         frames = frames.union(set(dataset_images[item]))
     frames = sorted(list(frames))
-            
+
     return frames
 
 
 def extract_dataset(image_paths, dataset_name):
-    # create directselected_imagesory
+    """
+    Extracts a dataset by copying images and labels to a new directory.
+
+    Args:
+        image_paths (list): A list of image paths to be copied.
+        dataset_name (str): The name of the new dataset.
+
+    Returns:
+        None
+    """
+    # create directory
     new_dataset_path = Path(st.session_state.datasets_path) / dataset_name
     new_dataset_path.mkdir(parents=True, exist_ok=True)
     # copy images
@@ -128,8 +179,10 @@ def extract_dataset(image_paths, dataset_name):
             except shutil.SameFileError:
                 continue
 
+# Create tabs
 tab1, tab2, tab3 = st.tabs(["Overview", "Manage", "Frames"])
 
+# Tab1: Overview of the datasets and their metadata 
 with tab1:
     with st.container():
         for dataset in datasets:
@@ -148,6 +201,7 @@ with tab1:
                     container.write("Metadata:")
                     container.json(json.load(open(json_file)), expanded=False)
 
+# Tab2: Manage the datasets, delete, extract, etc. Select for frames.
 with tab2:
     col1, col2 = st.columns([3, 1])
     selected = []
@@ -217,6 +271,17 @@ with tab2:
     st.write("Selected:", len(selected_images), selected)
 
 def draw_bbox(image, coords, class_id):
+    """
+    Draw bounding box on the image.
+
+    Parameters:
+    - image: The image to draw the bounding box on.
+    - coords: The coordinates of the bounding box.
+    - class_id: The class ID of the bounding box.
+
+    Returns:
+    - The image with the bounding box drawn.
+    """
     # convert coords to cv2 format
     # from <center x> <center y> <width> <height> to pt1 = (x, y), pt2 = (x + width, y + height)
     # use image.shape to get image width and height
@@ -265,10 +330,10 @@ def draw_bbox(image, coords, class_id):
 
     return image
 
+# Tab3: View the selected frames, and their annotations
 with tab3:
 
     if len(selected_images) > 0:
-        
         index = st.select_slider('Images from dataset', options=range(len(selected_images)))
 
         image = cv2.imread(str(selected_images[index]), cv2.IMREAD_COLOR)
