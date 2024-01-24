@@ -12,7 +12,7 @@ These tools provide functionalities for the entire machine learning life-cycle, 
   - Preview, Sample and meta logging  
   - Create and modify train and validation sets
   - Link to external datasets
-- Schedual and executing MLOps Tasks
+- Schedule and executing MLOps Tasks
   - Train, validation, inference, export, and import models
   - All tasks are executed in a queue with cancelation
   - Easy interface to create different tasks with full customization
@@ -66,6 +66,7 @@ If there are selected images, they will be **displayed** in the main area of the
 If no images are selected, a message will be displayed indicating that no images are selected.
 
 ![Dataset Image](resources/Cvat.png)
+
 ### **2. CVAT Page**
 
 This page is responsible for managing projects and tasks in the CVAT application. It provides a user-friendly interface for selecting and downloading tasks.
@@ -119,6 +120,7 @@ Once all selected tasks have been downloaded and processed, the progress bar wil
 Please note that this page requires access to the CVAT API and the specified dataset path for downloading and processing tasks.  
 
 ![Dataset Image](resources/MLOps.png)
+
 ### **3. MLops Management Page**
 
 The MLops Management Page allows users to create new sessions for object detection models. Users can select the model, dataset, hyperparameters, and other options to customize their tasks.
@@ -168,6 +170,12 @@ Select a pretrain model or start from scratch.
 
 ![Dataset Image](resources/Evaluation.png)
 
+#### Cancelation of Tasks
+
+The scheduler executes tasks in a queue, you can stop the current job  
+or remove the tasks in the queue by selecting the items and pressing the button.  
+
 ### **4. Evaluation Page**
+
 In this page, you can browse the results of all kinds of task runs.
 You can download and visualize the data by selecting the files.
