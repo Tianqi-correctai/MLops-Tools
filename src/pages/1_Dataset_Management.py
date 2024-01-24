@@ -273,7 +273,10 @@ with tab3:
         image = cv2.imread(str(selected_images[index]), cv2.IMREAD_COLOR)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         # load annotation
-        annotation_path = Path(selected_images[index].parent.parent / "labels" / selected_images[index].stem).with_suffix(".txt")
+        file_name = ".".join(str(selected_images[index].resolve()).split("/")[-1].split("."))
+        annotation_path = Path(selected_images[index].parent.parent / "labels" / file_name).with_suffix(".txt")
+        #print(annotation_path)
+        #annotation_path = Path(selected_images[index].parent.parent / "labels" / selected_images[index].stem).with_suffix(".txt")
         if annotation_path.exists():
             annotations = annotation_path.read_text().split('\n')
 

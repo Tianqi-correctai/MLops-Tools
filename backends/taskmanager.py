@@ -130,7 +130,7 @@ class TaskManager:
                         f.write(yaml_file.read())
                         f.write('#' * 50 + '\n')
             if task_data.get('weights') is not None:
-                f.write(f'Weights: {task_data["weights"]}\n')
+                f.write(f'Weights: {task_data["args"]["weights"]}\n')
 
             if task_data.get('remark') is not None:
                 f.write(f'Remark: {task_data["remark"]}\n')
@@ -210,7 +210,8 @@ class TaskManager:
                     with open(arg, 'r') as yaml_file:
                         f.write(yaml_file.read())
                         f.write('#' * 50 + '\n')
-            f.write(f'Weights: {task_data["weights"]}\n')
+            if task_data.get('weights') is not None:
+                f.write(f'Weights: {task_data["args"]["weights"]}\n')
             if task_data.get('remark') is not None:
                 f.write(f'Remark: {task_data["remark"]}\n')
 
@@ -440,20 +441,9 @@ class TaskManager:
         for task in self.task_queue.queue:
             task_dict = {}
             task_dict['task_id'] = task[0]
-            task_dict['model'] = task[1]['model']
+            task_dict['task_type'] = task[1]
+            task_dict['model'] = task[2]['model']
             task_dict['status'] = "not started"
-            args = []
-            for key, value in task[1]['args'].items():
-                args.append(f'--{key}')
-                args.append(f'{value}')
-
-            os.chdir(Path(__file__).resolve().parent)
-            venv_python = 'nets/yolov5/venv/bin/python'
-            extra_args = []
-            if task[1]['extra_args']:
-                extra_args = task[1]['extra_args'].split()
-            process_str = [venv_python, '-u', 'nets/yolov5/train.py', *args, *extra_args]
-            task_dict['command'] = ' '.join(process_str)
             queued_tasks.append(task_dict)
         return queued_tasks
 
