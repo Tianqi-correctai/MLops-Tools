@@ -2,7 +2,6 @@ from pathlib import Path
 import queue
 import threading
 import time
-from flask import Flask, jsonify, request
 import subprocess
 from threading import Thread, Event
 import os
@@ -10,28 +9,49 @@ import datetime
 
 class TaskManager:
     def __init__(self):
-        self.task_max_id = 1
-        self.finished_tasks = []
-        self.current_task = None
-        self.task_queue = queue.Queue()
-        self.stop_event = Event()
-        self.stop_current_task = Event()
-        self.runner = Thread(target=self.run)
-        self.yolov5_runs_map = {}
+        """
+        Initialize the TaskManager class.
+        """
+        self.task_max_id = 1  # Tracks the ID for the next task to be added
+        self.finished_tasks = []  # Stores completed tasks
+        self.current_task = None  # Holds the currently executing task
+        self.task_queue = queue.Queue()  # Queue for holding tasks
+        self.stop_event = Event()  # Event to signal the termination of task processing
+        self.stop_current_task = Event()  # Event to signal stopping the current task
+        self.runner = Thread(target=self.run)  # Thread for running tasks
+        self.yolov5_runs_map = {}  # Map to store paths of YoloV5 runs
 
     def terminate(self):
+        """
+        Terminate the task processing thread.
+        """
         self.stop_event.set()
         self.runner.join()
 
     def stop_task(self):
+        """
+        Stop the currently running task.
+
+        Returns:
+        dict: Status message with error or success information.
+        """
         if self.current_task is None:
             return {"error": "No task is running"}, 400
         self.stop_current_task.set()
 
     def empty_tasks(self):
+        """
+        Empty the task queue.
+        """
         self.task_queue = queue.Queue()
 
     def remove_task_from_queue(self, task_id):
+        """
+        Remove a task from the queue.
+
+        Parameters:
+        task_id (int): The ID of the task to be removed.
+        """
         tasks = []
         while not self.task_queue.empty():
             task = self.task_queue.get()
@@ -41,6 +61,14 @@ class TaskManager:
             self.task_queue.put(task)
 
     def log_handler(self, task_type, process, log_file_path):
+        """
+        Handle logging of task output.
+
+        Parameters:
+        task_type (str): The type of the task (e.g., 'train', 'validate').
+        process (subprocess.Popen): The process running the task.
+        log_file_path (str): Path to the log file.
+        """
         with open(log_file_path, 'w') as log_file:
             r_pos = None
             while True:
@@ -72,7 +100,13 @@ class TaskManager:
                     log_file.write(output)
                     log_file.flush()
 
+    # The 'run', 'train', 'validate', 'inference', and 'export' methods follow
+    # a similar pattern: they process tasks from the queue and handle task
+    # execution, logging, and status management.
     def run(self):
+        """
+        Continuously run tasks from the task queue.
+        """
         while not self.stop_event.is_set():
             try:
                 task_id, task_type, task_data = self.task_queue.get(timeout=1)  # Wait for a task
@@ -99,6 +133,16 @@ class TaskManager:
                 continue 
 
     def train(self, task_id, task_data):
+        """
+        Handle the training task.
+
+        Parameters:
+        task_id (int): The ID of the task.
+        task_data (dict): Data associated with the task.
+
+        Returns:
+        dict: The task with its updated status.
+        """
         args = []
         for key, value in task_data['args'].items():
             args.append(f'--{key}')
@@ -180,6 +224,16 @@ class TaskManager:
         return task 
     
     def validate(self, task_id, task_data):
+        """
+        Handle the validation task.
+
+        Parameters:
+        task_id (int): The ID of the task.
+        task_data (dict): Data associated with the task.
+
+        Returns:
+        dict: The task with its updated status.
+        """
         args = []
         for key, value in task_data['args'].items():
             args.append(f'--{key}')
@@ -260,6 +314,16 @@ class TaskManager:
         return task 
     
     def inference(self, task_id, task_data):
+        """
+        Handle the inference task.
+
+        Parameters:
+        task_id (int): The ID of the task.
+        task_data (dict): Data associated with the task.
+
+        Returns:
+        dict: The task with its updated status.
+        """
         args = []
         for key, value in task_data['args'].items():
             args.append(f'--{key}')
@@ -331,6 +395,16 @@ class TaskManager:
     
     # export is realtime
     def export(self, task_id, task_data):
+        """
+        Handle the export task.
+
+        Parameters:
+        task_id (int): The ID of the task.
+        task_data (dict): Data associated with the task.
+
+        Returns:
+        dict: The task with its updated status.
+        """
         args = []
         for key, value in task_data['args'].items():
             args.append(f'--{key}')
@@ -422,9 +496,21 @@ class TaskManager:
         return task 
 
     def get_current_task(self):
+        """
+        Get the currently running task.
+
+        Returns:
+        dict: The current task.
+        """
         return self.current_task
     
     def get_current_task_info(self):
+        """
+        Get detailed information about the current task.
+
+        Returns:
+        dict: Detailed information of the current task.
+        """
         if self.current_task is None:
             return None
         else:
@@ -437,6 +523,12 @@ class TaskManager:
             return task
     
     def get_queued_tasks(self):
+        """
+        Get a list of tasks in the queue.
+
+        Returns:
+        list: A list of queued tasks.
+        """
         queued_tasks = []
         for task in self.task_queue.queue:
             task_dict = {}
@@ -460,11 +552,27 @@ class TaskManager:
         return queued_tasks
 
     def get_tasks(self):
+        """
+        Get all tasks including current, finished, and queued tasks.
+
+        Returns:
+        dict: A dictionary containing all task information.
+        """
         return {'current_task': self.get_current_task(),
                  'finished_tasks': self.finished_tasks,
                    'queue': self.get_queued_tasks()}
 
     def add_task(self, task_type, task_data):
+        """
+        Add a task to the queue.
+
+        Parameters:
+        task_type (str): The type of the task (e.g., 'train', 'validate').
+        task_data (dict): Data associated with the task.
+
+        Returns:
+        dict: Status message with error or success information.
+        """
         task_id = self.task_max_id
 
         if task_type not in ["train", "validate", "inference", "export"]:

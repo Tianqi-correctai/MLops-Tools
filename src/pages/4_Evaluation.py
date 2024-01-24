@@ -114,8 +114,9 @@ with col2:
                     with col3_1:
                         st.subheader("Preview")
                     with col3_3:
-                        with open(selected2[0], 'rb') as f:
-                            st.download_button("Download", f, Path(selected2[0]).name, use_container_width=True)
+                        if not Path(selected2[0]).is_dir():
+                            with open(selected2[0], 'rb') as f:
+                                st.download_button("Download", f, Path(selected2[0]).name, use_container_width=True)
                     file = Path(selected2[0])
                     st_preview(file)
         else:

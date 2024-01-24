@@ -1,49 +1,63 @@
 from pathlib import Path
-import queue
-import threading
-import time
 from flask import Flask, jsonify, request
-import subprocess
-from threading import Thread, Event
-import os
-import datetime
 from taskmanager import TaskManager
 
 def get_train_runs(model):
+    """
+    Retrieve training runs for a given model.
+
+    Parameters:
+    model (str): The model name.
+
+    Returns:
+    dict: A dictionary mapping the path of each training run to its name.
+    """
     runs = {}  # {path : name}
+    
+    # Handle YoloV5 model case
     if model == "YoloV5":
         yolov5 = Path("../backends/data/train/YoloV5")
         
-        # get runs from the data folder
+        # Get runs from the data folder
         if yolov5.exists():
             for run in yolov5.iterdir():
                 if run.is_dir() and (run / "run").exists():
                     runs[str((run / "run").resolve())] = run.stem
 
-        # get runs from the yolov5/runs/train folder
+        # Get runs from the yolov5/runs/train folder
         if Path("../backends/nets/yolov5/runs/train").exists():
             for run in Path("../backends/nets/yolov5/runs/train").iterdir():
                 if run.is_dir():
                     path_str = str(run.resolve())
-                    # check if the run is already in the runs dict
                     if runs.get(path_str) is None:
                         runs[path_str] = path_str
 
         return runs
-
     elif model == "YoloV8":
+        # YoloV8 model is not implemented yet
         raise NotImplementedError
     
 def get_train_weights(model):
+    """
+    Retrieve training weights for a given model.
+
+    Parameters:
+    model (str): The model name.
+
+    Returns:
+    dict: A dictionary mapping the name of each weight file to its path.
+    """
     weights = {}  # {name : path}
 
+    # Handle YoloV5 model case
     if model == "YoloV5":
         yolov5 = Path("../backends/data/train/YoloV5")
-        # get uploaded weights
+        
+        # Get uploaded weights
         if (yolov5 / "uploaded").exists():
             for weight in (yolov5 / "uploaded").iterdir():
                 if weight.is_file() and weight.suffix == ".pt":
-                    weights["Uploaded"+ "/" + weight.name] = str(weight.resolve())
+                    weights["Uploaded" + "/" + weight.name] = str(weight.resolve())
 
         runs = get_train_runs(model)
         for run_path, run_name in runs.items():
@@ -52,104 +66,152 @@ def get_train_weights(model):
                 for weight in run_weights.iterdir():
                     if weight.is_file() and weight.suffix == ".pt":
                         weights[run_name + "/" + weight.name] = str(weight.resolve())
-        
-
 
         return weights
 
     elif model == "YoloV8":
+        # YoloV8 model is not implemented yet
         return {}
-    
 
 manager = TaskManager()
 manager.runner.start()
+
 app = Flask(__name__)
 
-# check if the server is online
 @app.route('/')
 def ping():
+    """
+    Check if the server is online.
+
+    Returns:
+    str: A simple response to indicate the server is running.
+    """
     return 'pong!'
 
-# get the list of current running tasks
+
 @app.route('/tasks', methods=['GET'])
 def get_tasks():
+    """
+    Get the list of current running tasks.
+
+    Returns:
+    JSON: List of tasks with their details.
+    """
     tasks = manager.get_tasks()
     return jsonify(tasks), 200
 
-# get the current task information
 @app.route('/current-task', methods=['GET'])
 def get_current_task_info():
+    """
+    Get the information of the current task being processed.
+
+    Returns:
+    JSON: Information of the current task.
+    """
     current_task = manager.get_current_task_info()
     return jsonify(current_task), 200
 
-# add a new task
 @app.route('/train', methods=['POST'])
 def start_training():
+    """
+    Add a new training task to the task manager.
+
+    Returns:
+    JSON: The result of the task addition.
+    """
     task_data = request.get_json()
     result = manager.add_task("train", task_data)
-    if result:
-        return jsonify(result[0]), result[1]
-    else:
-        return 500
+    return jsonify(result[0]), result[1] if result else 500
 
-# inference 
 @app.route('/inference', methods=['POST'])
 def inference_api():
+    """
+    Add a new inference task to the task manager.
+
+    Returns:
+    JSON: The result of the task addition.
+    """
     task_data = request.get_json()
     result = manager.add_task("inference", task_data)
-    if result:
-        return jsonify(result[0]), result[1]
-    else:
-        return 500
-    
-# validate
+    return jsonify(result[0]), result[1] if result else 500
+
 @app.route('/validate', methods=['POST'])
 def validate_api():
+    """
+    Add a new validation task to the task manager.
+
+    Returns:
+    JSON: The result of the task addition.
+    """
     task_data = request.get_json()
     result = manager.add_task("validate", task_data)
-    if result:
-        return jsonify(result[0]), result[1]
-    else:
-        return 500
-    
-# export
+    return jsonify(result[0]), result[1] if result else 500
+
 @app.route('/export', methods=['POST'])
 def export_api():
+    """
+    Add a new export task to the task manager.
+
+    Returns:
+    JSON: The result of the task addition.
+    """
     task_data = request.get_json()
     result = manager.add_task("export", task_data)
-    if result:
-        return jsonify(result[0]), result[1]
-    else:
-        return 500
+    return jsonify(result[0]), result[1] if result else 500
 
-
-# stop a running task
 @app.route('/stop-training', methods=['POST'])
 def stop_training():
+    """
+    Stop a running training task.
+
+    Returns:
+    JSON: Status of the stop operation.
+    """
     result = manager.stop_task()
-    if result:
-        return jsonify(result[0]), result[1]
-    else:
-        return jsonify({"status": "training stopped"}), 200
-    
-# remove a task from the queue
+    return jsonify(result[0]), result[1] if result else jsonify({"status": "training stopped"}), 200
+
 @app.route('/remove-task/<int:task_id>', methods=['DELETE'])
 def remove_from_queue(task_id):
+    """
+    Remove a task from the queue.
+
+    Parameters:
+    task_id (int): The ID of the task to be removed.
+
+    Returns:
+    JSON: Status of the removal operation.
+    """
     if task_id == manager.current_task['task_id']:
         manager.stop_task()
     else:
         manager.remove_task_from_queue(task_id)
     return jsonify({"status": "task removed from queue"}), 200
 
-# get train weights
 @app.route('/train-weights/<string:model>', methods=['GET'])
 def get_train_weights_api(model):
+    """
+    Get training weights for a specified model.
+
+    Parameters:
+    model (str): The model name.
+
+    Returns:
+    JSON: Dictionary of model weights.
+    """
     weights = get_train_weights(model)
     return jsonify(weights), 200
 
-# upload a weight file
 @app.route('/upload-weight/<string:model>', methods=['POST'])
 def upload_weight(model):
+    """
+    Upload a weight file for a specified model.
+
+    Parameters:
+    model (str): The model name.
+
+    Returns:
+    JSON: Status of the upload operation.
+    """
     if model == "YoloV5":
         if 'file' not in request.files:
             return jsonify({"error": "No file provided"}), 400
@@ -171,9 +233,14 @@ def upload_weight(model):
     elif model == "YoloV8":
         raise NotImplementedError
 
-# upload a detection source
 @app.route('/upload-source', methods=['POST'])
 def upload_video():
+    """
+    Upload a detection source (e.g., video file).
+
+    Returns:
+    JSON: Status of the upload operation.
+    """
     if 'file' not in request.files:
         return jsonify({"error": "No file provided"}), 400
     file = request.files['file']
@@ -198,9 +265,14 @@ def upload_video():
     else:
         return jsonify({"error": "No file provided"}), 400
     
-# get source list
 @app.route('/sources', methods=['GET'])
 def get_videos():
+    """
+    Get a list of all uploaded detection sources.
+
+    Returns:
+    JSON: List of sources.
+    """
     sources = {}
     source_folder = Path("../backends/data/sources")
     if source_folder.exists():
@@ -208,10 +280,14 @@ def get_videos():
             sources[source.name] = str(source.resolve())
     return jsonify(sources), 200
 
-
-# shut down the server
-@app.route('/shutdown')
+@app.route('/shutdown', methods=['GET'])
 def shutdown_server():
+    """
+    Shut down the server.
+
+    Returns:
+    str: A message indicating the shutdown status.
+    """
     manager.terminate()
     shutdown_func = request.environ.get('werkzeug.server.shutdown')
     if shutdown_func:
