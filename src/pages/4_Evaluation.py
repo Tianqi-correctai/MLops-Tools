@@ -96,7 +96,7 @@ with col1:
         build_tree_folder(train_path),
         build_tree_folder(val_path),
         build_tree_folder(infer_path),
-        build_tree_folder(sources_path),
+        build_tree_folder(sources_path, max_level=1),
         build_tree_folder(export_path)
     ], format_func=lambda x:Path(x).name, icon='table', open_all=True)
 
