@@ -14,18 +14,46 @@ get_params()
 datasets_root_path = Path(st.session_state['datasets_path']).resolve()
 
 def get_hyperparameter_files(model):
+    """
+    Get the hyperparameter files based on the specified model.
+
+    Parameters:
+    - model (str): The model name.
+
+    Returns:
+    - list: A list of hyperparameter files.
+    """
     if model == "YoloV5":
         return Path("../backends/nets/yolov5/data/hyps").glob("*.yaml")
     elif model == "YoloV8":
         return Path("../backends/nets/ultralytics/ultralytics/cfg").glob("*.yaml")
     
 def get_training_files(model):
+    """
+    Get the training files based on the specified model.
+
+    Parameters:
+    - model (str): The model name.
+
+    Returns:
+    - list: A list of training files.
+    """
     if model == "YoloV5":
         return Path("../backends/nets/yolov5/data").glob("*.yaml")
     elif model == "YoloV8":
         return Path("../backends/nets/ultralytics/ultralytics/cfg/datasets").glob("*.yaml")
     
 def write_train_config(name, model, train_datasets, val_datasets):
+    """
+    Write a training config file.
+
+    Parameters:
+    - name (str): The name of the config file.
+    - model (str): The model name.
+    - train_datasets (list): A list of training datasets.
+    - val_datasets (list): A list of validation datasets.
+    """
+
     config = f"""
 # Train/val sets
 path: {datasets_root_path}
@@ -199,9 +227,10 @@ if len(tasks['queue']) > 0:
 # add a new task
 st.title("Start New Task")
 
+# create tabs: train, validate, inference, export
 tab1, tab2, tab3, tab4 = st.tabs([":red[Train]", ":blue[Validation]", ":green[Inference]", ":orange[Import/Export]"])
 
-
+# train tab
 with tab1:
     st.write("Please select the model and the dataset to start training.")
     datasets = get_availible_datasets(st.session_state.datasets_path)
@@ -217,7 +246,11 @@ with tab1:
     with col2:
         batch_size = st.number_input("Batch Size", min_value=1, value=16, step=1, max_value=1000)
 
-    options = ["yolov5s.pt", "yolov5m.pt", "yolov5l.pt", "yolov5x.pt"]
+    options = []
+    if model == "YoloV5":
+        options = ["yolov5s.pt", "yolov5m.pt", "yolov5l.pt", "yolov5x.pt"]
+    elif model == "YoloV8":
+        options = ["yolov8n.pt", "yolov8s.pt", "yolov8m.pt", "yolov8l.pt", "yolov8x.pt"]
     options += list(weights.keys())
     weight = st.selectbox("Pretrained Weights", options)
 
@@ -285,7 +318,10 @@ with tab1:
             pass
         if dataset_option == 1:
             write_train_config(config_name, model, train_set, val_set)
-            train_path = Path(f"../backends/nets/yolov5/data/{config_name}.yaml")
+            if model == "YoloV5":
+                train_path = Path(f"../backends/nets/yolov5/data/{config_name}.yaml")
+            elif model == "YoloV8":
+                train_path = Path(f"../backends/nets/ultralytics/ultralytics/cfg/datasets/{config_name}.yaml")
 
         args = {
             "model": model,
@@ -302,6 +338,7 @@ with tab1:
         requests.post(request_url + "/train", json=args)
         st.rerun()
 
+# validation tab
 with tab2:
     st.write("Please select the model and the dataset to start validation.")
     datasets = get_availible_datasets(st.session_state.datasets_path)
@@ -355,7 +392,7 @@ with tab2:
 
     if dataset_option == 1:
         with col3:
-            button_save_train_config = st.button("Save Config", use_container_width=True, disabled=(config_name == "" or len(train_set) == 0))
+            button_save_train_config = st.button("Save Config", use_container_width=True, disabled=(config_name == "" or len(val_set) == 0))
             if button_save_train_config:
                 write_train_config(config_name, model, train_set, val_set)
 
@@ -364,7 +401,10 @@ with tab2:
             pass
         if dataset_option == 1:
             write_train_config(config_name, model, train_set, val_set)
-            train_path = Path(f"../backends/nets/yolov5/data/{config_name}.yaml")
+            if model == "YoloV5":
+                train_path = Path(f"../backends/nets/yolov5/data/{config_name}.yaml")
+            elif model == "YoloV8":
+                train_path = Path(f"../backends/nets/ultralytics/ultralytics/cfg/datasets/{config_name}.yaml")
 
         args = {
             "model": model,
@@ -378,6 +418,7 @@ with tab2:
         requests.post(request_url + "/validate", json=args)
         st.rerun()
 
+# inference tab
 with tab3:
     st.write("Please select the model and the video to start inference.")
     model = st.selectbox("Model", ["YoloV5", "YoloV8"])
@@ -445,6 +486,7 @@ with tab3:
                         response = requests.post(request_url + f"/upload-source", files={"file": uploaded_file})
                     st.rerun()
 
+# export tab
 with tab4:
     st.write("Please select the model and manage weights.")
     model = st.selectbox("Model", ["YoloV5", "YoloV8"], key="model-tab4")

@@ -7,6 +7,7 @@ from threading import Thread, Event
 import os
 import datetime
 
+ORIG_PATH = os.getcwd() # Store the original working directory
 class TaskManager:
     def __init__(self):
         """
@@ -19,7 +20,7 @@ class TaskManager:
         self.stop_event = Event()  # Event to signal the termination of task processing
         self.stop_current_task = Event()  # Event to signal stopping the current task
         self.runner = Thread(target=self.run)  # Thread for running tasks
-        self.yolov5_runs_map = {}  # Map to store paths of YoloV5 runs
+        self.yolo_runs_map = {}  # Map to store paths of YoloV5 runs
 
     def terminate(self):
         """
@@ -87,15 +88,18 @@ class TaskManager:
 
                     if task_type == "train":
                         # get the run id ("...nets/yolov5/runs/train/exp%run_id%....")
-                        if self.yolov5_runs_map.get(log_file_path) is None and "Plotting labels to" in output:
+                        if self.yolo_runs_map.get(log_file_path) is None and "Plotting labels to" in output:  # yolov5
                             run_id = output.split("Plotting labels to ")[1].split("/labels.jpg")[0]
-                            self.yolov5_runs_map[log_file_path] = run_id
+                            self.yolo_runs_map[log_file_path] = run_id
+                        elif self.yolo_runs_map.get(log_file_path) is None and "Logging results to [1m" in output:
+                            run_id = output.split("Logging results to [1m")[1].split("[0m")[0]
+                            self.yolo_runs_map[log_file_path] = run_id
 
                     if task_type == "validate" or task_type == "inference" or task_type == "export":
                         # get the run id ("...nets/yolov5/runs/train/exp%run_id%....")
-                        if self.yolov5_runs_map.get(log_file_path) is None and "Results saved to [1m" in output:
+                        if self.yolo_runs_map.get(log_file_path) is None and "Results saved to [1m" in output:
                             run_id = output.split("Results saved to [1m")[1].split("[0m")[0]
-                            self.yolov5_runs_map[log_file_path] = run_id
+                            self.yolo_runs_map[log_file_path] = run_id
 
                     log_file.write(output)
                     log_file.flush()
@@ -144,21 +148,43 @@ class TaskManager:
         dict: The task with its updated status.
         """
         args = []
-        for key, value in task_data['args'].items():
-            args.append(f'--{key}')
-            args.append(f'{value}')
+        venv_python = None
+        run_path = None
 
-        os.chdir(Path(__file__).resolve().parent)
-        venv_python = 'nets/yolov5/venv/bin/python'
-                    
-        run_path = Path(f"data/train/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+        if task_data['model'] == 'YoloV5':
+            for key, value in task_data['args'].items():
+                args.append(f'--{key}')
+                args.append(f'{value}')       
+
+            os.chdir(Path(__file__).resolve().parent)
+            venv_python = 'nets/yolov5/venv/bin/python'
+            run_path = Path(f"data/train/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+
+        if task_data['model'] == 'YoloV8':
+            os.chdir(Path(__file__).resolve().parent)
+            venv_python = 'nets/ultralytics/venv/bin/python'
+            run_path = Path(f"data/train/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+
         run_path.mkdir(parents=True, exist_ok=True)
         log_file = run_path / 'stdout.log'
 
         extra_args = []
         if task_data.get('extra_args') is not None:
             extra_args = task_data['extra_args'].split()
-        process_str = [venv_python, '-u', 'nets/yolov5/train.py', *args, *extra_args]
+            
+        if task_data['model'] == 'YoloV5':
+            process_str = [venv_python, '-u', 'nets/yolov5/train.py', *args, *extra_args]
+        elif task_data['model'] == 'YoloV8':
+            save_dir = Path(__file__).resolve().parent / "nets/ultralytics/runs"
+            script = f"""
+from ultralytics import YOLO
+model = YOLO('{task_data["args"]["weights"]}')
+results = model.train(data='{task_data["args"]["data"]}', batch={task_data["args"]["batch-size"]}, epochs={task_data["args"]["epoch"]}, imgsz=640, project='{save_dir}')
+print(results)
+"""
+            process_str = [venv_python, '-u', '-c', script]
+        else:
+            raise ValueError(f"Model {task_data['model']} not found")
                     
         cmd_file = run_path / 'meta.log'
         with open(cmd_file, 'w') as f:
@@ -213,8 +239,8 @@ class TaskManager:
         task['status'] = status
 
         # add run files to the task
-        if task['model'] == 'YoloV5':
-            yolo_run_folder = self.yolov5_runs_map.get(log_file)
+        if task['model'] == 'YoloV5' or task['model'] == 'YoloV8':
+            yolo_run_folder = self.yolo_runs_map.get(log_file)
             if yolo_run_folder is not None:
                 yolo_run_folder = str(Path(yolo_run_folder).resolve())
                 task['artifacts'] = yolo_run_folder
@@ -235,21 +261,43 @@ class TaskManager:
         dict: The task with its updated status.
         """
         args = []
-        for key, value in task_data['args'].items():
-            args.append(f'--{key}')
-            args.append(f'{value}')
+        venv_python = None
+        run_path = None
 
-        os.chdir(Path(__file__).resolve().parent)
-        venv_python = 'nets/yolov5/venv/bin/python'
-                    
-        run_path = Path(f"data/val/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+        if task_data['model'] == 'YoloV5':
+            for key, value in task_data['args'].items():
+                args.append(f'--{key}')
+                args.append(f'{value}')    
+
+            os.chdir(Path(__file__).resolve().parent)
+            venv_python = 'nets/yolov5/venv/bin/python'
+            run_path = Path(f"data/val/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+
+        if task_data['model'] == 'YoloV8':
+            os.chdir(Path(__file__).resolve().parent)
+            venv_python = 'nets/ultralytics/venv/bin/python'
+            run_path = Path(f"data/val/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+
         run_path.mkdir(parents=True, exist_ok=True)
         log_file = run_path / 'stdout.log'
 
         extra_args = []
         if task_data.get('extra_args') is not None:
             extra_args = task_data['extra_args'].split()
-        process_str = [venv_python, '-u', 'nets/yolov5/val.py', *args, *extra_args]
+            
+        if task_data['model'] == 'YoloV5':
+            process_str = [venv_python, '-u', 'nets/yolov5/val.py', *args, *extra_args]
+        elif task_data['model'] == 'YoloV8':
+            save_dir = Path(__file__).resolve().parent / "nets/ultralytics/runs"
+            script = f"""
+from ultralytics import YOLO
+model = YOLO('{task_data["args"]["weights"]}')
+results = model.val(data='{task_data["args"]["data"]}', project='{save_dir}')
+print(results)
+"""
+            process_str = [venv_python, '-u', '-c', script]
+        else:
+            raise ValueError(f"Model {task_data['model']} not found")
 
         cmd_file = run_path / 'meta.log'
         with open(cmd_file, 'w') as f:
@@ -303,8 +351,8 @@ class TaskManager:
         task['status'] = status
 
         # add run files to the task
-        if task['model'] == 'YoloV5':
-            yolo_run_folder = self.yolov5_runs_map.get(log_file)
+        if task['model'] == 'YoloV5' or task['model'] == 'YoloV8':
+            yolo_run_folder = self.yolo_runs_map.get(log_file)
             if yolo_run_folder is not None:
                 yolo_run_folder = str(Path(yolo_run_folder).resolve())
                 task['artifacts'] = yolo_run_folder
@@ -325,21 +373,43 @@ class TaskManager:
         dict: The task with its updated status.
         """
         args = []
-        for key, value in task_data['args'].items():
-            args.append(f'--{key}')
-            args.append(f'{value}')
+        venv_python = None
+        run_path = None
 
-        os.chdir(Path(__file__).resolve().parent)
-        venv_python = 'nets/yolov5/venv/bin/python'
-                    
-        run_path = Path(f"data/inference/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+        if task_data['model'] == 'YoloV5':
+            for key, value in task_data['args'].items():
+                args.append(f'--{key}')
+                args.append(f'{value}')    
+
+            os.chdir(Path(__file__).resolve().parent)
+            venv_python = 'nets/yolov5/venv/bin/python'
+            run_path = Path(f"data/inference/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+
+        if task_data['model'] == 'YoloV8':
+            os.chdir(Path(__file__).resolve().parent)
+            venv_python = 'nets/ultralytics/venv/bin/python'
+            run_path = Path(f"data/inference/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+
         run_path.mkdir(parents=True, exist_ok=True)
         log_file = run_path / 'stdout.log'
 
         extra_args = []
         if task_data.get('extra_args') is not None:
             extra_args = task_data['extra_args'].split()
-        process_str = [venv_python, '-u', 'nets/yolov5/detect.py', *args, *extra_args]
+            
+        if task_data['model'] == 'YoloV5':
+            process_str = [venv_python, '-u', 'nets/yolov5/detect.py', *args, *extra_args]
+        elif task_data['model'] == 'YoloV8':
+            save_dir = Path(__file__).resolve().parent / "nets/ultralytics/runs"
+            script = f"""
+from ultralytics import YOLO
+model = YOLO('{task_data["args"]["weights"]}')
+results = model.predict(source="{task_data["args"]["source"]}", conf={task_data["args"]["conf-thres"]}, save=True, project='{save_dir}')
+print(results)
+"""
+            process_str = [venv_python, '-u', '-c', script]
+        else:
+            raise ValueError(f"Model {task_data['model']} not found")
 
         cmd_file = run_path / 'meta.log'
         with open(cmd_file, 'w') as f:
@@ -383,8 +453,8 @@ class TaskManager:
         task['status'] = status
 
         # add run files to the task
-        if task['model'] == 'YoloV5':
-            yolo_run_folder = self.yolov5_runs_map.get(log_file)
+        if task['model'] == 'YoloV5' or task['model'] == 'YoloV8':
+            yolo_run_folder = self.yolo_runs_map.get(log_file)
             if yolo_run_folder is not None:
                 yolo_run_folder = str(Path(yolo_run_folder).resolve())
                 task['artifacts'] = yolo_run_folder
@@ -406,21 +476,43 @@ class TaskManager:
         dict: The task with its updated status.
         """
         args = []
-        for key, value in task_data['args'].items():
-            args.append(f'--{key}')
-            args.append(f'{value}')
+        venv_python = None
+        run_path = None
 
-        os.chdir(Path(__file__).resolve().parent)
-        venv_python = 'nets/yolov5/venv/bin/python'
-                    
-        run_path = Path(f"data/export/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+        if task_data['model'] == 'YoloV5':
+            for key, value in task_data['args'].items():
+                args.append(f'--{key}')
+                args.append(f'{value}')    
+
+            os.chdir(Path(__file__).resolve().parent)
+            venv_python = 'nets/yolov5/venv/bin/python'
+            run_path = Path(f"data/export/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+
+        if task_data['model'] == 'YoloV8':
+            os.chdir(Path(__file__).resolve().parent)
+            venv_python = 'nets/ultralytics/venv/bin/python'
+            run_path = Path(f"data/export/{task_data['model']}/{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}")
+
         run_path.mkdir(parents=True, exist_ok=True)
         log_file = run_path / 'stdout.log'
 
         extra_args = []
         if task_data.get('extra_args') is not None:
             extra_args = task_data['extra_args'].split()
-        process_str = [venv_python, '-u', 'nets/yolov5/export.py', *args, *extra_args]
+
+            
+        if task_data['model'] == 'YoloV5':
+            process_str = [venv_python, '-u', 'nets/yolov5/export.py', *args, *extra_args]
+        elif task_data['model'] == 'YoloV8':
+            save_dir = Path(__file__).resolve().parent / "nets/ultralytics/runs"
+            script = f"""
+from ultralytics import YOLO
+model = YOLO('{task_data["args"]["weights"]}')
+model.export(format='onnx')
+"""
+            process_str = [venv_python, '-u', '-c', script]
+        else:
+            raise ValueError(f"Model {task_data['model']} not found")
 
         cmd_file = run_path / 'meta.log'
         with open(cmd_file, 'w') as f:

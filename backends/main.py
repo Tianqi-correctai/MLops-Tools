@@ -34,8 +34,24 @@ def get_train_runs(model):
 
         return runs
     elif model == "YoloV8":
-        # YoloV8 model is not implemented yet
-        raise NotImplementedError
+        yolov8 = Path("../backends/data/train/YoloV8")
+        
+        # Get runs from the data folder
+        if yolov8.exists():
+            for run in yolov8.iterdir():
+                if run.is_dir() and (run / "run").exists():
+                    runs[str((run / "run").resolve())] = run.stem
+
+
+        # Get runs from the yolov8/runs/train folder
+        if Path("../backends/nets/ultralytics/runs").exists():
+            for run in Path("../backends/nets/ultralytics/runs").iterdir():
+                if run.is_dir() and "train" in run.name:
+                    path_str = str(run.resolve())
+                    if runs.get(path_str) is None:
+                        runs[path_str] = path_str
+
+        return runs        
     
 def get_train_weights(model):
     """
@@ -49,29 +65,30 @@ def get_train_weights(model):
     """
     weights = {}  # {name : path}
 
-    # Handle YoloV5 model case
+    path_to_runs = None
     if model == "YoloV5":
-        yolov5 = Path("../backends/data/train/YoloV5")
-        
-        # Get uploaded weights
-        if (yolov5 / "uploaded").exists():
-            for weight in (yolov5 / "uploaded").iterdir():
-                if weight.is_file() and weight.suffix == ".pt":
-                    weights["Uploaded" + "/" + weight.name] = str(weight.resolve())
-
-        runs = get_train_runs(model)
-        for run_path, run_name in runs.items():
-            run_weights = Path(run_path) / "weights"
-            if run_weights.exists():
-                for weight in run_weights.iterdir():
-                    if weight.is_file() and weight.suffix == ".pt":
-                        weights[run_name + "/" + weight.name] = str(weight.resolve())
-
-        return weights
-
+        path_to_runs = Path("../backends/data/train/YoloV5")
     elif model == "YoloV8":
-        # YoloV8 model is not implemented yet
+        path_to_runs = Path("../backends/data/train/YoloV8")
+    else:
         return {}
+        
+    # Get uploaded weights
+    if (path_to_runs / "uploaded").exists():
+        for weight in (path_to_runs / "uploaded").iterdir():
+            if weight.is_file() and weight.suffix == ".pt":
+                weights["Uploaded" + "/" + weight.name] = str(weight.resolve())
+
+    runs = get_train_runs(model)
+    for run_path, run_name in runs.items():
+        run_weights = Path(run_path) / "weights"
+        if run_weights.exists():
+            for weight in run_weights.iterdir():
+                if weight.is_file() and weight.suffix == ".pt":
+                    weights[run_name + "/" + weight.name] = str(weight.resolve())
+
+    return weights
+
 
 manager = TaskManager()
 manager.runner.start()
@@ -212,7 +229,7 @@ def upload_weight(model):
     Returns:
     JSON: Status of the upload operation.
     """
-    if model == "YoloV5":
+    if model == "YoloV5" or model == "YoloV8":
         if 'file' not in request.files:
             return jsonify({"error": "No file provided"}), 400
         file = request.files['file']
@@ -230,7 +247,7 @@ def upload_weight(model):
             return jsonify({"status": "file uploaded"}), 200
         else:
             return jsonify({"error": "No file provided"}), 400
-    elif model == "YoloV8":
+    else:
         raise NotImplementedError
 
 @app.route('/upload-source', methods=['POST'])
